@@ -1,3 +1,111 @@
+###############################
+# house_040325 (model house_030625)
+###############################
+## ignore folder
+_ignore/
+
+## vscode
+.vscode/
+
+## solidity & npm support
+bin/
+node_modules/
+package-lock.json
+
+## misc OSx
+*~
+.#.*
+\#.gitignore#
+*.DS_Store
+\#.env#
+\#__init__.py#
+__pycache__
+~$*
+
+## xcode workspace
+*.xcworkspace
+
+## hide site security
+#sites/
+
+## hide emebedded repos #
+house_tools/
+
+## hide logs #
+logs/
+
+## hide posts ##
+posts/
+
+## hide wallets ##
+_wallets/
+## hide environmentals
+.env*
+pkg-*/
+
+## hide legacy helpers
+_legacy/
+_inv/
+_expenses/
+
+## ignore folders ##
+#_*/
+
+#-------------------------------------#
+# ignore c# fivem based
+#-------------------------------------#
+# .NET Build Output (ignore c# fivem based)
+bin/
+obj/
+# *.dll
+# *.pdb
+# *.exe
+
+# # .NET User-Specific Files
+# *.user
+# *.suo
+# *.userprefs
+
+# # .NET Core / SDK
+# *.csproj.dotnet.temp
+# *.nupkg
+# *.snk
+# *.DotSettings.user
+# [Dd]ebug/
+# [Rr]elease/
+# x64/
+# x86/
+# [Aa]rchive/
+
+# # Visual Studio / VS Code
+# .vscode/
+# .vs/
+# *.sln.docstates
+# *.code-workspace
+
+# # NuGet Packages
+# packages/
+# *.nuget.props
+# *.nuget.targets
+
+# # Logs and Temp Files
+# *.log
+# *.tmp
+# *.cache
+
+# # FiveM-Specific (Optional)
+# # Exclude server files if you accidentally include them in the repo
+# server-data/
+# txData/
+# cache/
+# *.lock
+# *.db
+#######################################
+#######################################
+
+#-------------------------------------#
+# c++ github default #
+#-------------------------------------#
 # Prerequisites
 *.d
 
