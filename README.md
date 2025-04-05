@@ -1,16 +1,6 @@
 # dm4c-fivem
 dm4c c# fivem client/server integration
 
-
-## build (unix base .net core)
-    $ dotnet --version
-    $ cd .../dm4c-fivem
-    $ dotnet new -i CitizenFX.Templates
-    $ mkdir MyResource
-    $ cd MyResource/
-    $ dotnet new cfx-resource
-    $ dotnet build
-
 ## NEXT
     - build server-data (c# based) and deploy on remote linux server (ubuntu)
         - install .net core on remote server (ref: https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#set-environment-variables-system-wide)
@@ -41,10 +31,38 @@ dm4c c# fivem client/server integration
             $ cd /srv/www/dm4c-fivem/server-data/resources/MyResources
             $ dotnet build
 
-        - install fivem on remote server (ref: https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/)
+        - install fivem on remote server (ref: https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/#linux)
+            $ cd .../server-data
+            $ mkdir ../server
+            $ cd ../server
+            $ wget https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/14033-60505548e21b6d6e0844e02e571513e15bff5ccc/fx.tar.xz
+            $ tar xf fx.tar.xz
+            $ cd ../server-data
+            $ ../server/run.sh +exec server.cfg
+
         - run server via: ./run.sh +exec server.cfg (ref: legacy projects & grok thread)
         - try to join game via fivem, etc. (ref: legacy projects)
     
     DONE - clone vanilla ref: https://github.com/citizenfx/cfx-server-data.git into .../server-data-vanilla
         NOTE: this is lua based (not C#)
     DONE - where does the server.cfg go for c# integration (need initial test server.cfg)
+
+## feature set design
+    - game mdoe: $BULLET token purchase
+        - buy ammo via tebex
+            - cost / amount received?
+        - collect ammo after kills
+        - withdraw ammo to sonic chain EOA
+            - handgun | rifle ammo: 1 bullet = 1 $BULLET token
+    - game mode: no bullet tokens
+        - playing for a certain amount time + certain amount of kills (of people players w/ "high" kill count)
+            - earns $FRAG tokens
+    
+## init project & build (local mac osx - unix base .net core)
+    $ dotnet --version
+    $ cd .../dm4c-fivem
+    $ dotnet new -i CitizenFX.Templates
+    $ mkdir MyResource
+    $ cd MyResource/
+    $ dotnet new cfx-resource
+    $ dotnet build

@@ -54,6 +54,13 @@ _expenses/
 #-------------------------------------#
 # ignore c# fivem based
 #-------------------------------------#
+## cfx server directory
+server/
+
+## fivem server runners
+server-data/.replxx_history
+server-data/cache/
+
 # .NET Build Output (ignore c# fivem based)
 bin/
 obj/

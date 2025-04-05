@@ -1,0 +1,16 @@
+# ref_040325: grok generated
+
+# Server settings
+endpoint_add_tcp "0.0.0.0:30120"
+endpoint_add_udp "0.0.0.0:30120"
+sv_hostname "My Test FiveM Server"
+sv_maxclients 32
+sv_licenseKey "your_fivem_dev_key_here"
+
+# Resources
+ensure MyResource
+
+# Basic settings
+sets tags "default, test"
+sets locale "en-US"
+sv_scriptHookAllowed 0
