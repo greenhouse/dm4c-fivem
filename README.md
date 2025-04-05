@@ -17,6 +17,8 @@ dm4c c# fivem client/server integration
             $ cd .../MyResources
             $ dotnet build
         - install .net core on remote server (ref: grok thread)
+            $ sudo apt update
+            $ sudo apt install dotnet-runtime-8.0
         - install fivem on remote server (ref: https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/)
         - run server via: ./run.sh +exec server.cfg (ref: legacy projects & grok thread)
         - try to join game via fivem, etc. (ref: legacy projects)
