@@ -28,7 +28,18 @@ dm4c c# fivem client/server integration
 
 	- ready for continued design of feature sets 
 		w/ c# updates and more lua scripting (if needed)
-        
+
+## feature set design
+    - game mdoe: $BULLET token purchase
+        - buy ammo via tebex
+            - cost / amount received?
+        - collect ammo after kills
+        - withdraw ammo to sonic chain EOA
+            - handgun | rifle ammo: 1 bullet = 1 $BULLET token
+    - game mode: no bullet tokens
+        - playing for a certain amount time + certain amount of kills (of people players w/ "high" kill count)
+            - earns $FRAG tokens
+
 ## build server-data (c# based) and deploy on remote linux server (ubuntu)
     - install .net core on remote server (ref: https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#set-environment-variables-system-wide)
         # NOTE_SUCCESS: appears to work fine on ubuntu 22.0.x but NOT ubuntu 24.0.x (but maybe i messed up and tried 'apt' first like grok suggested below)
@@ -74,20 +85,9 @@ dm4c c# fivem client/server integration
             note: add vanilla lua resources from:
                 https://github.com/citizenfx/cfx-server-data.git
 
-    - search for running server in servers.fivem.net (via fivem windows client)
     - install GTAV via steam on windows
+    - search for running server in servers.fivem.net (via fivem windows client)
     - join game via fivem client on windows
-
-## feature set design
-    - game mdoe: $BULLET token purchase
-        - buy ammo via tebex
-            - cost / amount received?
-        - collect ammo after kills
-        - withdraw ammo to sonic chain EOA
-            - handgun | rifle ammo: 1 bullet = 1 $BULLET token
-    - game mode: no bullet tokens
-        - playing for a certain amount time + certain amount of kills (of people players w/ "high" kill count)
-            - earns $FRAG tokens
     
 ## init project & build (local mac osx - unix base .net core)
     $ dotnet --version
