@@ -125,14 +125,14 @@ dm4c c# fivem client/server integration
     - install fivem on remote server & run (via run.sh)
         (ref: https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/#linux)
         $ cd .../server-data
-        $ mkdir ../server
-        $ cd ../server
+        $ mkdir ../_server
+        $ cd ../_server
         $ wget https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/14033-60505548e21b6d6e0844e02e571513e15bff5ccc/fx.tar.xz
         $ tar xf fx.tar.xz
 
     - deploy fivem server (via: run.sh +exec server.cfg)
         $ cd .../server-data
-        $ ../server/run.sh +exec server.cfg
+        $ ../_server/run.sh +exec server.cfg
             note: use vanilla server.cfg (placed in .../server-data)
                 https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/#linux)
             note: add vanilla lua resources from:
