@@ -54,6 +54,9 @@ _expenses/
 #-------------------------------------#
 # ignore c# fivem based
 #-------------------------------------#
+## local server.cfg testing
+local.cfg
+
 ## cfx server directory
 _server/
 

@@ -93,9 +93,57 @@ dm4c c# fivem client/server integration
         - how do we use that amount to back $BULLET token stable on dexes
             (1 $BULLET = 1 penny)
 
+## setup local VM (virtual box) ubuntu instance
+    - install virtua box & ubuntu instance
+    - run ubuntu instance
+    - get VM ubuntu IP address (on ubuntu side)
+        $ ifconfig
+    - Port Forwarding: If your Mac’s firewall blocks 30120, open it (on ubuntuside)
+        $ sudo ufw allow 30120
+    - mount fivem project directory to ubuntu side
+        Set Up a Shared Folder on Your Mac:
+            On your Mac, keep your dm4c-fivem/ repo folder where you edit it (e.g., .../git/dm4c-fivem/).
+            Open VirtualBox, select your Ubuntu VM, and go to Settings > Shared Folders
+            Click the “+” icon:
+                Folder Path: Browse to your dm4c-fivem/ folder on your Mac (e.g., .../git/dm4c-fivem/MyResource).
+                Folder Name: Call it something like 'dm4c-fivem'
+                Check 'Auto-mount' and 'Make Permanent'
+                Mount Point: Leave blank or set to /mnt/dm4c-fivem (you’ll use this later)
+            Save and start the VM.
+        Mount the Shared Folder in Ubuntu
+            $ sudo apt update
+            $ sudo apt install -y virtualbox-guest-utils
+            $ sudo mkdir -p /mnt/dm4c-fivem
+            $ sudo mount -t vboxsf dm4c-fivem /mnt/dm4c-fivem
+            $ cd /mnt/dm4c-fivem
+            $ ls -la
+        Link to mounted FiveM Resources to standard server deploy path
+            $ ln -s /mnt/dm4c-fivem /srv/dm4c-fivem
+    - Install .net core on ubuntu VM
+        # ref: https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#set-environment-variables-system-wide
+        # NOTE_SUCCESS: appears to work fine on ubuntu 18.0.x & 22.0.x, but NOT ubuntu 24.0.x (but maybe i messed up and tried 'apt' first like grok suggested below)
+            $ sudo su
+            $ cd /srv
+            $ wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+            $ chmod 744 dotnet-install.sh 
+            $ ./dotnet-install.sh --version latest
+            $ snap install dotnet-sdk
+            $ snap install dotnet-sdk --classic
+            $ dotnet --version
+            $ dotnet --list-sdks
+            $ dotnet --list-runtimes
+            $ cd .../MyResources
+            $ dotnet build
+     - Test build & run fivem local ubuntu VM server
+        $ cd /srv/dm4c-fivem/resources/MyResource
+        $ dotnet build
+        $ cd /srv/dm4c-fivem/server-data
+        $ ../_server/run.sh +exec local.cfg
+
 ## build server-data (c# based) and deploy on remote linux server (ubuntu)
-    - install .net core on remote server (ref: https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#set-environment-variables-system-wide)
-        # NOTE_SUCCESS: appears to work fine on ubuntu 22.0.x but NOT ubuntu 24.0.x (but maybe i messed up and tried 'apt' first like grok suggested below)
+    - install .net core on remote server
+        # ref: https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#set-environment-variables-system-wide
+        # NOTE_SUCCESS: appears to work fine on ubuntu 18.0.x & 22.0.x, but NOT ubuntu 24.0.x (but maybe i messed up and tried 'apt' first like grok suggested below)
             $ sudo su
             $ cd /srv
             $ wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
