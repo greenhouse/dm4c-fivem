@@ -55,7 +55,7 @@ _expenses/
 # ignore c# fivem based
 #-------------------------------------#
 ## cfx server directory
-server/
+# server/
 
 ## fivem server runners
 server-data/.replxx_history
