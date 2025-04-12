@@ -29,6 +29,8 @@ namespace DeathmatchServer
         // private void OnPurchaseAmmo([FromSource] Player player, int amount)
         // {
         //     int playerHandle = int.Parse(player.Handle);
+        //     // note_041225: 'GetValueOrDefault' fails to compile, even w/ 'using System.Linq;'
+        //     //  alt 'OnPurchaseAmmo' integration below
         //     playerReserves[playerHandle] = playerReserves.GetValueOrDefault(playerHandle, 0) + amount;
         //     player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandle]);
         //     Debug.WriteLine($"{player.Name} purchased {amount} ammo. New reserve: {playerReserves[playerHandle]}");
