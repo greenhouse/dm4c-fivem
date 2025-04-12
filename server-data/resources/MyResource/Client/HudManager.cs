@@ -24,6 +24,37 @@ namespace DeathmatchClient
                 API.SendNuiMessage($@"{{""type"": ""showHud"", ""visible"": {hudVisible.ToString().ToLower()}}}");
                 Screen.ShowNotification($"HUD {(hudVisible ? "enabled" : "disabled")}");
             }), false);
+
+            // New givehandgun command
+            API.RegisterCommand("givehandgun", new Action<int, dynamic>((source, args) =>
+            {
+                int ammo = 50; // Default ammo
+                if (args.Count > 0)
+                {
+                    if (int.TryParse(args[0].ToString(), out int parsedAmmo))
+                    {
+                        ammo = parsedAmmo;
+                    }
+                    else
+                    {
+                        Screen.ShowNotification("Invalid ammo amount. Using default (50).");
+                    }
+                }
+                // if (args.Count > 0 && int.TryParse(args[0].ToString(), out int parsedAmmo))
+                // {
+                //     ammo = parsedAmmo;
+                // }
+
+                // Give pistol and loaded ammo
+                uint weaponHash = (uint)API.GetHashKey("WEAPON_PISTOL");
+                int playerPed = API.PlayerPedId();
+                API.GiveWeaponToPed(playerPed, weaponHash, 0, false, true); // Equip pistol
+                API.AddAmmoToPed(playerPed, weaponHash, ammo); // Add loaded ammo
+                Screen.ShowNotification($"Gave pistol with {ammo} loaded ammo.");
+
+                // Trigger server event to update reserve ammo
+                TriggerServerEvent("purchaseAmmo", ammo); // Reuse existing event
+            }), false);
         }
 
         private void OnClientResourceStart(string resourceName)
