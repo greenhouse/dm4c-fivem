@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        #ammoHud {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ammoHud" style="display: none;">
+        Loaded: <span id="loaded">0</span> | Reserve: <span id="reserve">0</span>
+    </div>
+
+    <script>
+        window.addEventListener('message', (event) => {
+            let data = event.data;
+            if (data.type === 'showHud') {
+                document.getElementById('ammoHud').style.display = data.visible ? 'block' : 'none';
+            } else if (data.type === 'updateAmmo') {
+                document.getElementById('loaded').innerText = data.loaded;
+                document.getElementById('reserve').innerText = data.reserve;
+            }
+        });
+    </script>
+</body>
+</html>
