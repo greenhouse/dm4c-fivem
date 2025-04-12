@@ -68,12 +68,13 @@ dm4c c# fivem client/server integration
             - in-game 'kill' = user drops all 'live ammo' (NOTE: no 'reserve ammo' dropped)
             - in-game 'ammo pickup' = user acquires dropped 'live ammo', gets stored to them as 'reserve ammo'
                 - triggers DM4C contract 'transfer' $BULLET tokens to EOA (bound to cfx player ID)
-        - mapping in-game ammo types -> on-chain $BULLET token value
-            - 1 handgun ammo = 1 $BULLET token
-            - 1 AR ammo      = 2 $BULLET tokens
-            - 1 shotgun ammo = 3 $BULLET tokens
-            - 1 grenade ammo = 4 $BULLET tokens
-            - 1 RL ammo      = 5 $BULLET tokens
+        - mapping in-game ammo types -> on-chain $BULLET token value (1 $BULLET token = 1 penny)
+            - 1 handgun ammo = 1 $BULLET token  = $0.01
+            - 1 AR ammo      = 2 $BULLET tokens = $0.02
+            - 1 shotgun ammo = 4 $BULLET tokens = $0.04
+            - 1 sniper ammo  = 5 $BULLET tokens = $0.05
+            - 1 grenade ammo = 7 $BULLET tokens = $0.07
+            - 1 RL ammo      = 10 $BULLET tokens = $0.10
 
     - game mode: skirmish
         - TODO: need tokenomics design
