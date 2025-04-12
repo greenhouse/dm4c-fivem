@@ -1,5 +1,5 @@
 using CitizenFX.Core;
-// using CitizenFX.Core.UI;
+using CitizenFX.Core.UI;
 using CitizenFX.Core.Native;
 using System;
 using System.Threading.Tasks;
@@ -9,12 +9,21 @@ namespace DeathmatchClient
     public class HudManager : BaseScript
     {
         private int reserveAmmo = 0;
+        private bool hudVisible = true; // Track HUD state
 
         public HudManager()
         {
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
             EventHandlers["updateAmmoReserve"] += new Action<int>(OnUpdateAmmoReserve);
             Tick += UpdateHud;
+
+            // Register test command
+            API.RegisterCommand("togglehud", new Action<int, dynamic>((source, args) =>
+            {
+                hudVisible = !hudVisible; // Toggle state
+                API.SendNuiMessage($@"{{""type"": ""showHud"", ""visible"": {hudVisible.ToString().ToLower()}}}");
+                Screen.ShowNotification($"HUD {(hudVisible ? "enabled" : "disabled")}");
+            }), false);
         }
 
         private void OnClientResourceStart(string resourceName)
