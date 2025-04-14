@@ -10,7 +10,7 @@ namespace DeathmatchClient
 {
     public class HudManager : BaseScript
     {
-        private int LOADED_AMMO = 0;
+        private int LIVE_AMMO = 0;
         private int RESERVE_AMMO = 0;
         private int LAST_WEAPON_AMMO_CNT = 0;
         private int LAST_WEAPONHASH_SELECT = 0; // Track last equipped weapon
@@ -190,7 +190,7 @@ namespace DeathmatchClient
             {
                 if (RESERVE_AMMO == 0)
                 {
-                    hlog("No reserve ammo available. Use /givereserve first.", false, true); // debug, screen
+                    hlog("No reserve ammo available. Use /givereserve first.", true, true); // debug, screen
                     return;
                 }
 
@@ -208,7 +208,7 @@ namespace DeathmatchClient
                     }
                 }
 
-                LOADED_AMMO += ammo;
+                LIVE_AMMO += ammo;
 
                 // // Give pistol and loaded ammo
                 // uint weaponHash = (uint)API.GetHashKey("WEAPON_PISTOL");
@@ -239,21 +239,21 @@ namespace DeathmatchClient
             // set client side reserve for HUD
             RESERVE_AMMO = reserve;
 
-            // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+            // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
             SetPedAmmoWithBulletValue();
             
             // update HUD
-            hlog($"Updating HUD with LOADED_AMMO: {LOADED_AMMO}", true, false); // debug, screen
-            UpdateNui(LOADED_AMMO);
+            hlog($"Updating HUD with LIVE_AMMO: {LIVE_AMMO} | RESERVE_AMMO: {RESERVE_AMMO}", true, false); // debug, screen
+            UpdateNui(LIVE_AMMO);
         }
         private void SetPedAmmoWithBulletValue()
         {
-            // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+            // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
             //  NOTE: uses WEAPONHASH_BULLET_VALUE to calc usable ammo
             int playerPed = API.PlayerPedId();
             int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
             int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
-            int calcAmmoAvail = bulletVal > 0 ? LOADED_AMMO / bulletVal : 0; // calc available ammo using bulletVal for this weapon
+            int calcAmmoAvail = bulletVal > 0 ? LIVE_AMMO / bulletVal : 0; // calc available ammo using bulletVal for this weapon
             API.SetPedAmmo(playerPed, (uint)weaponHashSel, calcAmmoAvail);
 
             // update last ammo count for next task calc
@@ -280,13 +280,13 @@ namespace DeathmatchClient
                 API.SetPedAmmo(playerPed, (uint)LAST_WEAPONHASH_SELECT, 0);
                 int lastAmmo = API.GetAmmoInPedWeapon(playerPed, (uint)LAST_WEAPONHASH_SELECT);
 
-                // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+                // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
                 SetPedAmmoWithBulletValue();
                 
                 // log weapon switch
                 hlog($"Weapon switched from: {weaponNameLast} _ to: {weaponName}, reset last ammo to: {lastAmmo}", true, false); // debug, screen
 
-                // Update last weapon select & ammo count (for tracking LOADED_AMMO amount)
+                // Update last weapon select & ammo count (for tracking LIVE_AMMO amount)
                 LAST_WEAPONHASH_SELECT = weaponHashSel; 
             }
             await Task.FromResult(0);
@@ -298,15 +298,15 @@ namespace DeathmatchClient
             int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
             
             if (API.IsPedShooting(playerPed)) {
-                hlog($"API.IsPedShooting invoked w/ LOADED_AMMO: {LOADED_AMMO}, LAST_WEAPON_AMMO_CNT: {LAST_WEAPON_AMMO_CNT}", true, true); // debug, screen
+                hlog($"API.IsPedShooting invoked w/ LIVE_AMMO: {LIVE_AMMO}, LAST_WEAPON_AMMO_CNT: {LAST_WEAPON_AMMO_CNT}", true, true); // debug, screen
 
                 // set 0 ammo if negative
-                if (LOADED_AMMO <= 0) {
+                if (LIVE_AMMO <= 0) {
                     hlog($"No Loaded ammo. Use|Fill Reserve!", true, true); // bool: debug, screen
-                    LOADED_AMMO = 0;
+                    LIVE_AMMO = 0;
                     LAST_WEAPON_AMMO_CNT = 0;
 
-                    // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+                    // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
                     SetPedAmmoWithBulletValue();
                 } else {
                     // get current player w/ weaponHash selected
@@ -320,13 +320,13 @@ namespace DeathmatchClient
                     
                     // calc loaded ammo for HUD update
                     int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
-                    // LOADED_AMMO = LOADED_AMMO - bulletVal; // calc new total LOADED_AMMO
-                    LOADED_AMMO = LOADED_AMMO - (bulletVal * weapAmmoDischarge); // calc new total LOADED_AMMO
+                    // LIVE_AMMO = LIVE_AMMO - bulletVal; // calc new total LIVE_AMMO
+                    LIVE_AMMO = LIVE_AMMO - (bulletVal * weapAmmoDischarge); // calc new total LIVE_AMMO
                     LAST_WEAPON_AMMO_CNT = weaponAmmoCurr; // save and update last ammo count for next task calc
                 }
 
                 // update HUD
-                UpdateNui(LOADED_AMMO); 
+                UpdateNui(LIVE_AMMO); 
             }
             await Task.FromResult(0);
         }
@@ -338,7 +338,7 @@ namespace DeathmatchClient
             
             API.SendNuiMessage($@"{{
                 ""type"": ""updateAmmo"",
-                ""loaded"": {LOADED_AMMO},
+                ""live"": {LIVE_AMMO},
                 ""reserve"": {RESERVE_AMMO}
             }}");
         }

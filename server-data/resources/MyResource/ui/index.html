@@ -24,7 +24,8 @@
 </head>
 <body>
     <div id="ammoHud" style="display: none;">
-        Loaded: <span id="loaded">0</span> | Reserve: <span id="reserve">0</span>
+        $BULLET Tokens<br>
+        Live: <span id="live">0</span> | Reserve: <span id="reserve">0</span>
     </div>
 
     <script>
@@ -33,7 +34,7 @@
             if (data.type === 'showHud') {
                 document.getElementById('ammoHud').style.display = data.visible ? 'block' : 'none';
             } else if (data.type === 'updateAmmo') {
-                document.getElementById('loaded').innerText = data.loaded;
+                document.getElementById('live').innerText = data.live;
                 document.getElementById('reserve').innerText = data.reserve;
             }
         });
