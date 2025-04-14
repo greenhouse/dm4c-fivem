@@ -4,6 +4,7 @@ using CitizenFX.Core.Native;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+// using Mono.CSharp;
 
 namespace DeathmatchClient
 {
@@ -11,11 +12,12 @@ namespace DeathmatchClient
     {
         private int LOADED_AMMO = 0;
         private int RESERVE_AMMO = 0;
-        private int LAST_WEAPON_AMMO = 0;
+        private int LAST_WEAPON_AMMO_CNT = 0;
         private int LAST_WEAPONHASH_SELECT = 0; // Track last equipped weapon
         private bool hudVisible = true; // Track HUD state
 
         // weapon type to bullet token value
+        private readonly int WEAPONHASH_NONE = -1569615261;
         private readonly string[] WEAPON_NAME_LIST = new string[]
         {
             "WEAPON_PISTOL",       // Index 0
@@ -24,7 +26,7 @@ namespace DeathmatchClient
             "WEAPON_SNIPERRIFLE",  // Index 3
             "WEAPON_GRENADE",      // Index 4
             "WEAPON_RPG",          // Index 5
-            "WEAPON_HOMINGLAUNCHER" // Index 6
+            "WEAPON_HOMINGLAUNCHER", // Index 6
         };
         // String text = WEAPON_NAME_LIST[0];
         private readonly Dictionary<int, int> WEAPONHASH_BULLET_VALUE;
@@ -54,6 +56,7 @@ namespace DeathmatchClient
         {
             WEAPONHASH_BULLET_VALUE = new Dictionary<int, int>
             {
+                { WEAPONHASH_NONE, 0 },      // None: 0 $BULLET = $0.00
                 { API.GetHashKey(WEAPON_NAME_LIST[0]), 1 },      // Handgun: 1 $BULLET = $0.01
                 { API.GetHashKey(WEAPON_NAME_LIST[1]), 2 }, // AR: 2 $BULLET = $0.02
                 { API.GetHashKey(WEAPON_NAME_LIST[2]), 4 }, // Shotgun: 4 $BULLET = $0.04
@@ -61,7 +64,6 @@ namespace DeathmatchClient
                 { API.GetHashKey(WEAPON_NAME_LIST[4]), 7 },     // Grenade: 7 $BULLET = $0.07
                 { API.GetHashKey(WEAPON_NAME_LIST[5]), 10 },         // Rocket Launcher: 10 $BULLET = $0.10
                 { API.GetHashKey(WEAPON_NAME_LIST[6]), 20 } // Homing Launcher: 20 $BULLET = $0.20
-                
             };
             WEAPONHASH_TO_NAME = new Dictionary<int, string>
             {
@@ -84,7 +86,7 @@ namespace DeathmatchClient
             {
                 hudVisible = !hudVisible; // Toggle state
                 API.SendNuiMessage($@"{{""type"": ""showHud"", ""visible"": {hudVisible.ToString().ToLower()}}}");
-                Screen.ShowNotification($"HUD {(hudVisible ? "enabled" : "disabled")}");
+                hlog($"HUD {(hudVisible ? "enabled" : "disabled")}", false, true); // debug, screen
             }), false);
 
             // New givehandgun command
@@ -99,7 +101,7 @@ namespace DeathmatchClient
                     }
                     else
                     {
-                        Screen.ShowNotification("Invalid ammo amount. Using default (50).");
+                        hlog("Invalid ammo amount. Using default (50).", false, true); // debug, screen
                     }
                 }
 
@@ -108,7 +110,7 @@ namespace DeathmatchClient
                 int playerPed = API.PlayerPedId();
                 API.GiveWeaponToPed(playerPed, weaponHash, 0, false, true); // Equip pistol
                 API.AddAmmoToPed(playerPed, weaponHash, ammo); // Add loaded ammo
-                Screen.ShowNotification($"Gave pistol with {ammo} loaded ammo.");
+                hlog($"Gave pistol with {ammo} loaded ammo.", false, true); // debug, screen
 
                 // Trigger server event to update reserve ammo
                 TriggerServerEvent("purchaseAmmo", ammo); // Reuse existing event
@@ -128,7 +130,7 @@ namespace DeathmatchClient
                 API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[5]), 0, false, false);
                 API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[6]), 0, false, false);
 
-                Screen.ShowNotification($"Gave default guns with 0 ammo.");
+                hlog($"Gave default guns with 0 ammo.", false, true); // debug, screen
             }), false);
 
             // // New give gun choice command: givegun 
@@ -175,7 +177,7 @@ namespace DeathmatchClient
                     }
                     else
                     {
-                        Screen.ShowNotification($"Invalid ammo amount. Using default {ammo}.");
+                        hlog($"Invalid ammo amount. Using default {ammo}.", false, true); // debug, screen
                     }
                 }
 
@@ -188,7 +190,7 @@ namespace DeathmatchClient
             {
                 if (RESERVE_AMMO == 0)
                 {
-                    Screen.ShowNotification("No reserve ammo available. Use /givegun first.");
+                    hlog("No reserve ammo available. Use /givereserve first.", false, true); // debug, screen
                     return;
                 }
 
@@ -199,14 +201,14 @@ namespace DeathmatchClient
                         if (parsedAmmo <= RESERVE_AMMO) {
                             ammo = parsedAmmo;
                         } else {
-                            Screen.ShowNotification($"Not enough reserve ammo. Using default max reserve {ammo}.");
+                            hlog($"Not enough reserve ammo. Using default max reserve {ammo}.", false, true); // debug, screen
                         }
                     } else {
-                        Screen.ShowNotification($"No|Invalid ammo amount. Using default {ammo}.");
+                        hlog($"No|Invalid ammo amount. Using default {ammo}.", false, true); // debug, screen
                     }
                 }
 
-                LOADED_AMMO = ammo;
+                LOADED_AMMO += ammo;
 
                 // // Give pistol and loaded ammo
                 // uint weaponHash = (uint)API.GetHashKey("WEAPON_PISTOL");
@@ -237,34 +239,39 @@ namespace DeathmatchClient
             // set client side reserve for HUD
             RESERVE_AMMO = reserve;
 
-            // set ped's selected weapon with LOADED_AMMO amount
-            SetWeaponSelectLoadedAmmo();
+            // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+            SetPedAmmoWithBulletValue();
             
             // update HUD
+            hlog($"Updating HUD with LOADED_AMMO: {LOADED_AMMO}", true, false); // debug, screen
             UpdateNui(LOADED_AMMO);
         }
-        private void SetWeaponSelectLoadedAmmo()
+        private void SetPedAmmoWithBulletValue()
         {
-            // get current player w/ weaponHash selected
+            // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+            //  NOTE: uses WEAPONHASH_BULLET_VALUE to calc usable ammo
             int playerPed = API.PlayerPedId();
             int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
+            int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
+            int calcAmmoAvail = bulletVal > 0 ? LOADED_AMMO / bulletVal : 0; // calc available ammo using bulletVal for this weapon
+            API.SetPedAmmo(playerPed, (uint)weaponHashSel, calcAmmoAvail);
 
-            // set ped's selected weapon with LOADED_AMMO amount
-            //  NOTE: maxes out weapon ammount count if needed, doesn't matter
-            API.SetPedAmmo(playerPed, (uint)weaponHashSel, LOADED_AMMO);
+            // update last ammo count for next task calc
+            LAST_WEAPON_AMMO_CNT = API.GetAmmoInPedWeapon(playerPed, (uint)weaponHashSel);
         }
 
-        // LEFT OFF HERE ... this doesn't seem to work proplery 
-        //      every weapon change seems to add to total LOADED_AMMO count in HUD
         private async Task UpdateWeapon()
         {
             // get current player w/ weaponHash selected
             int playerPed = API.PlayerPedId();
             int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
+            // int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
 
             // Check / log weapon switch
             if (LAST_WEAPONHASH_SELECT != weaponHashSel)
             {
+                hlog($"Weapon switch detected: {LAST_WEAPONHASH_SELECT} _ to: {weaponHashSel}", true, false); // debug, screen
+
                 // get new and last weapon names for logging
                 string weaponName = WEAPONHASH_TO_NAME.TryGetValue(weaponHashSel, out string name) ? name : $"Unknown (0x{weaponHashSel:X8})";
                 string weaponNameLast = WEAPONHASH_TO_NAME.TryGetValue(LAST_WEAPONHASH_SELECT, out string nameLast) ? nameLast : $"Unknown (0x{LAST_WEAPONHASH_SELECT:X8})";
@@ -273,15 +280,13 @@ namespace DeathmatchClient
                 API.SetPedAmmo(playerPed, (uint)LAST_WEAPONHASH_SELECT, 0);
                 int lastAmmo = API.GetAmmoInPedWeapon(playerPed, (uint)LAST_WEAPONHASH_SELECT);
 
-                // set ped's selected weapon with LOADED_AMMO amount
-                API.SetPedAmmo(playerPed, (uint)weaponHashSel, LOADED_AMMO);
-
+                // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+                SetPedAmmoWithBulletValue();
+                
                 // log weapon switch
-                String log = $"Weapon switched from: {weaponNameLast} _ to: {weaponName}, reset last ammo to: {lastAmmo}";
-                Debug.WriteLine(log);
-                Screen.ShowNotification(log);
+                hlog($"Weapon switched from: {weaponNameLast} _ to: {weaponName}, reset last ammo to: {lastAmmo}", true, false); // debug, screen
 
-                // Update last weapon
+                // Update last weapon select & ammo count (for tracking LOADED_AMMO amount)
                 LAST_WEAPONHASH_SELECT = weaponHashSel; 
             }
             await Task.FromResult(0);
@@ -291,40 +296,38 @@ namespace DeathmatchClient
             // get current player w/ weaponHash selected
             int playerPed = API.PlayerPedId();
             int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
-
-            // // Check / log weapon switch
-            // if (LAST_WEAPONHASH_SELECT != weaponHashSel)
-            // {
-            //     // get new and last weapon names for logging
-            //     string weaponName = WEAPONHASH_TO_NAME.TryGetValue(weaponHashSel, out string name) ? name : $"Unknown (0x{weaponHashSel:X8})";
-            //     string weaponNameLast = WEAPONHASH_TO_NAME.TryGetValue(LAST_WEAPONHASH_SELECT, out string nameLast) ? nameLast : $"Unknown (0x{LAST_WEAPONHASH_SELECT:X8})";
-
-            //     // set ped's selected weapon with LOADED_AMMO amount
-            //     SetWeaponSelectLoadedAmmo();
-
-            //     // reset last weapon ammo to 0
-            //     API.SetPedAmmo(playerPed, (uint)LAST_WEAPONHASH_SELECT, 0);
-            //     int lastAmmo = API.GetAmmoInPedWeapon(playerPed, (uint)LAST_WEAPONHASH_SELECT);
-
-            //     // log weapon switch
-            //     String log = $"Weapon switched from: {weaponNameLast} _ to: {weaponName}, reset last ammo to: {lastAmmo}";
-            //     Debug.WriteLine(log);
-            //     Screen.ShowNotification(log);
-
-            //     // Update last weapon
-            //     LAST_WEAPONHASH_SELECT = weaponHashSel; 
-            // }
             
-            // calc weaponHash ammo discharged during this task (and update global for next task)
-            int weaponAmmoCurr = API.GetAmmoInPedWeapon(playerPed, (uint)weaponHashSel);
-            // int weapAmmoDischarge = LAST_WEAPON_AMMO - weaponAmmoCurr;
-            // LAST_WEAPON_AMMO = weaponAmmoCurr; // save and update for next task calc
+            if (API.IsPedShooting(playerPed)) {
+                hlog($"API.IsPedShooting invoked w/ LOADED_AMMO: {LOADED_AMMO}, LAST_WEAPON_AMMO_CNT: {LAST_WEAPON_AMMO_CNT}", true, true); // debug, screen
 
-            // calc loaded ammo to update HUD with
-            int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
-            // LOADED_AMMO = LOADED_AMMO - (bulletVal * weapAmmoDischarge); // calc new total LOADED_AMMO
-            LOADED_AMMO = LOADED_AMMO - bulletVal; // calc new total LOADED_AMMO
-            UpdateNui(LOADED_AMMO); // update HUD
+                // set 0 ammo if negative
+                if (LOADED_AMMO <= 0) {
+                    hlog($"No Loaded ammo. Use|Fill Reserve!", true, true); // bool: debug, screen
+                    LOADED_AMMO = 0;
+                    LAST_WEAPON_AMMO_CNT = 0;
+
+                    // SetPedAmmo w/ LOADED_AMMO & WEAPONHASH_BULLET_VALUE calc
+                    SetPedAmmoWithBulletValue();
+                } else {
+                    // get current player w/ weaponHash selected
+                    // int playerPed = API.PlayerPedId();
+                    // int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
+
+                    // calc weaponHash ammo discharged during this task (and update global for next task)
+                    int weaponAmmoCurr = API.GetAmmoInPedWeapon(playerPed, (uint)weaponHashSel);
+                    int weapAmmoDischarge = LAST_WEAPON_AMMO_CNT - weaponAmmoCurr; // NOTE: calc total discharge amnt incase frames/tasks are missed
+                    hlog($"weaponAmmoCurr: {weaponAmmoCurr}, weapAmmoDischarge: {weapAmmoDischarge}", true, false); // debug, screen
+                    
+                    // calc loaded ammo for HUD update
+                    int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
+                    // LOADED_AMMO = LOADED_AMMO - bulletVal; // calc new total LOADED_AMMO
+                    LOADED_AMMO = LOADED_AMMO - (bulletVal * weapAmmoDischarge); // calc new total LOADED_AMMO
+                    LAST_WEAPON_AMMO_CNT = weaponAmmoCurr; // save and update last ammo count for next task calc
+                }
+
+                // update HUD
+                UpdateNui(LOADED_AMMO); 
+            }
             await Task.FromResult(0);
         }
 
@@ -338,6 +341,12 @@ namespace DeathmatchClient
                 ""loaded"": {LOADED_AMMO},
                 ""reserve"": {RESERVE_AMMO}
             }}");
+        }
+
+        private void hlog(string message, bool debug, bool screen)
+        {
+            if (debug) Debug.WriteLine(message);
+            if (screen) Screen.ShowNotification(message);
         }
     }
 }
