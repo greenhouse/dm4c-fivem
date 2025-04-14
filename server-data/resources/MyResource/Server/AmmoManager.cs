@@ -14,6 +14,7 @@ namespace DeathmatchServer
         {
             EventHandlers["playerSpawned"] += new Action<Player>(OnPlayerSpawned);
             EventHandlers["purchaseAmmo"] += new Action<Player, int>(OnPurchaseAmmo);
+            EventHandlers["loadReserveAmmo"] += new Action<Player, int>(OnLoadReserveAmmo);
         }
 
         private void OnPlayerSpawned([FromSource] Player player)
@@ -42,6 +43,14 @@ namespace DeathmatchServer
             playerReserves[playerHandle] = currentReserve + amount;
             player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandle]);
             Debug.WriteLine($"{player.Name} purchased {amount} ammo. New reserve: {playerReserves[playerHandle]}");
+        }
+        private void OnLoadReserveAmmo([FromSource] Player player, int amount)
+        {
+            int playerHandle = int.Parse(player.Handle);
+            int currentReserve = playerReserves.ContainsKey(playerHandle) ? playerReserves[playerHandle] : 0;
+            playerReserves[playerHandle] = currentReserve - amount;
+            player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandle]);
+            Debug.WriteLine($"{player.Name} loaded {amount} reserve ammo. New reserve: {playerReserves[playerHandle]}");
         }
     }
 }
