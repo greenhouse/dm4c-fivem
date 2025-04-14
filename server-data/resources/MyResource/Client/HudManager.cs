@@ -18,42 +18,22 @@ namespace DeathmatchClient
 
         // weapon type to bullet token value
         private readonly int WEAPONHASH_NONE = -1569615261;
-        private readonly string[] WEAPON_NAME_LIST = new string[]
-        {
-            "WEAPON_PISTOL",       // Index 0
-            "WEAPON_ASSAULTRIFLE", // Index 1
-            "WEAPON_PUMPSHOTGUN",  // Index 2
-            "WEAPON_SNIPERRIFLE",  // Index 3
-            "WEAPON_GRENADE",      // Index 4
-            "WEAPON_RPG",          // Index 5
-            "WEAPON_HOMINGLAUNCHER", // Index 6
-        };
-        // String text = WEAPON_NAME_LIST[0];
+        private readonly string[] WEAPON_NAME_LIST;
         private readonly Dictionary<int, int> WEAPONHASH_BULLET_VALUE;
         private readonly Dictionary<int, string> WEAPONHASH_TO_NAME;
-        // private readonly Dictionary<int, int> WEAPONHASH_BULLET_VALUE = new Dictionary<int, int>
-        // {
-        //     { API.GetHashKey(WEAPON_NAME_LIST[0]), 1 },      // Handgun: 1 $BULLET = $0.01
-        //     { API.GetHashKey("WEAPON_ASSAULTRIFLE"), 2 }, // AR: 2 $BULLET = $0.02
-        //     { API.GetHashKey("WEAPON_PUMPSHOTGUN"), 4 }, // Shotgun: 4 $BULLET = $0.04
-        //     { API.GetHashKey("WEAPON_SNIPERRIFLE"), 5 }, // Sniper: 5 $BULLET = $0.05
-        //     { API.GetHashKey("WEAPON_GRENADE"), 7 },     // Grenade: 7 $BULLET = $0.07
-        //     { API.GetHashKey("WEAPON_RPG"), 10 },         // Rocket Launcher: 10 $BULLET = $0.10
-        //     { API.GetHashKey("WEAPON_HOMINGLAUNCHER"), 20 } // Homing Launcher: 20 $BULLET = $0.20
-            
-        // };
-        // private readonly Dictionary<int, string> WEAPONHASH_TO_NAME = new Dictionary<int, string>
-        // {
-        //     { unchecked(API.GetHashKey("WEAPON_PISTOL")), "WEAPON_PISTOL" },      // Handgun
-        //     { unchecked(API.GetHashKey("WEAPON_ASSAULTRIFLE")), "WEAPON_ASSAULTRIFLE" }, // AR
-        //     { unchecked(API.GetHashKey("WEAPON_PUMPSHOTGUN")), "WEAPON_PUMPSHOTGUN" },  // Shotgun
-        //     { unchecked(API.GetHashKey("WEAPON_SNIPERRIFLE")), "WEAPON_SNIPERRIFLE" }, // Sniper
-        //     { unchecked(API.GetHashKey("WEAPON_GRENADE")), "WEAPON_GRENADE" },     // Grenade
-        //     { unchecked(API.GetHashKey("WEAPON_RPG")), "WEAPON_RPG" },          // Rocket Launcher
-        //     { unchecked(API.GetHashKey("WEAPON_HOMINGLAUNCHER")), "WEAPON_HOMINGLAUNCHER" }          // Homing Launcher
-        // };
+
         public HudManager()
         {
+            WEAPON_NAME_LIST = new string[]
+            {
+                "WEAPON_PISTOL",       // Index 0
+                "WEAPON_ASSAULTRIFLE", // Index 1
+                "WEAPON_PUMPSHOTGUN",  // Index 2
+                "WEAPON_SNIPERRIFLE",  // Index 3
+                "WEAPON_GRENADE",      // Index 4
+                "WEAPON_RPG",          // Index 5
+                "WEAPON_HOMINGLAUNCHER", // Index 6
+            };
             WEAPONHASH_BULLET_VALUE = new Dictionary<int, int>
             {
                 { WEAPONHASH_NONE, 0 },      // None: 0 $BULLET = $0.00
@@ -133,38 +113,6 @@ namespace DeathmatchClient
                 hlog($"Gave default guns with 0 ammo.", false, true); // debug, screen
             }), false);
 
-            // // New give gun choice command: givegun 
-            // API.RegisterCommand("givegun", new Action<int, dynamic>((source, args) =>
-            // {
-            //     int ammo = 10; // Default ammo
-            //     string weaponName = "WEAPON_PISTOL"; // Default weapon
-            //     uint weaponHash = (uint)API.GetHashKey("WEAPON_PISTOL"); // Default weapon
-            //     int playerPed = API.PlayerPedId();
-                
-            //     if (args.count > 0) {
-            //         weaponName = args[0].ToString();
-            //         weaponHash = (uint)API.GetHashKey(weaponName);   
-
-            //         if (args.Count > 1) {
-            //             if (int.TryParse(args[1].ToString(), out int parsedAmmo)) {
-            //                 ammo = parsedAmmo;
-            //             } else {
-            //                 Screen.ShowNotification($"No|Invalid ammo amount. Using default {ammo}.");
-            //             }
-            //         }
-            //     } else {
-            //         Screen.ShowNotification($"No weapon name or ammount count provided. Using default {weaponName} & {ammo}.");
-            //     }
-
-            //     // Give gun and loaded ammo
-            //     API.GiveWeaponToPed(playerPed, weaponHash, 0, false, true); // Equip weapon
-            //     API.AddAmmoToPed(playerPed, weaponHash, ammo); // Add loaded ammo
-            //     Screen.ShowNotification($"Gave {weaponName} with {ammo} loaded ammo.");
-
-            //     // Trigger server event to update reserve ammo
-            //     TriggerServerEvent("purchaseAmmo", ammo); // Reuse existing event
-            // }), false);
-
             // New givehandgun command
             API.RegisterCommand("/givereserve", new Action<int, dynamic>((source, args) =>
             {
@@ -208,19 +156,8 @@ namespace DeathmatchClient
                     }
                 }
 
+                // increment live ammo
                 LIVE_AMMO += ammo;
-
-                // // Give pistol and loaded ammo
-                // uint weaponHash = (uint)API.GetHashKey("WEAPON_PISTOL");
-                // int playerPed = API.PlayerPedId();
-                // int weaponHashSlot = API.GetPedWeapontypeInSlot(playerPed, weaponHash); // returns 0 if weaponHash slot is empty
-                // int weaponHashSel = API.GetSelectedPedWeapon(playerPed); // returns weaponHash player currently holding
-                // // int curr_weaponHash = API.GetCurrentPedWeapon(playerPed); // Get current weapon
-                // // API.GetAmmoInPedWeapon
-                // API.GiveWeaponToPed(playerPed, weaponHash, 0, false, true); // Equip pistol
-                // API.AddAmmoToPed(playerPed, weaponHash, ammo); // Add loaded ammo
-                // API.SetPedAmmo(int ped, uint weaponHash, int ammo);
-                // Screen.ShowNotification($"Gave pistol with {ammo} loaded ammo.");
 
                 // Trigger server event to update reserve ammo
                 TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
@@ -265,13 +202,10 @@ namespace DeathmatchClient
             // get current player w/ weaponHash selected
             int playerPed = API.PlayerPedId();
             int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
-            // int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
 
             // Check / log weapon switch
             if (LAST_WEAPONHASH_SELECT != weaponHashSel)
             {
-                hlog($"Weapon switch detected: {LAST_WEAPONHASH_SELECT} _ to: {weaponHashSel}", true, false); // debug, screen
-
                 // get new and last weapon names for logging
                 string weaponName = WEAPONHASH_TO_NAME.TryGetValue(weaponHashSel, out string name) ? name : $"Unknown (0x{weaponHashSel:X8})";
                 string weaponNameLast = WEAPONHASH_TO_NAME.TryGetValue(LAST_WEAPONHASH_SELECT, out string nameLast) ? nameLast : $"Unknown (0x{LAST_WEAPONHASH_SELECT:X8})";
@@ -284,7 +218,8 @@ namespace DeathmatchClient
                 SetPedAmmoWithBulletValue();
                 
                 // log weapon switch
-                hlog($"Weapon switched from: {weaponNameLast} _ to: {weaponName}, reset last ammo to: {lastAmmo}", true, false); // debug, screen
+                hlog($"Weapon switched _from: {LAST_WEAPONHASH_SELECT} _to: {weaponHashSel}", false, false); // debug, screen
+                hlog($"Weapon switched _from: {weaponNameLast} _to: {weaponName}, reset prev weapon ammo to: {lastAmmo}", true, false); // debug, screen
 
                 // Update last weapon select & ammo count (for tracking LIVE_AMMO amount)
                 LAST_WEAPONHASH_SELECT = weaponHashSel; 
@@ -298,7 +233,7 @@ namespace DeathmatchClient
             int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
             
             if (API.IsPedShooting(playerPed)) {
-                hlog($"API.IsPedShooting invoked w/ LIVE_AMMO: {LIVE_AMMO}, LAST_WEAPON_AMMO_CNT: {LAST_WEAPON_AMMO_CNT}", true, true); // debug, screen
+                hlog($"API.IsPedShooting invoked w/ LIVE_AMMO: {LIVE_AMMO}, LAST_WEAPON_AMMO_CNT: {LAST_WEAPON_AMMO_CNT}", true, false); // debug, screen
 
                 // set 0 ammo if negative
                 if (LIVE_AMMO <= 0) {
@@ -309,14 +244,10 @@ namespace DeathmatchClient
                     // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
                     SetPedAmmoWithBulletValue();
                 } else {
-                    // get current player w/ weaponHash selected
-                    // int playerPed = API.PlayerPedId();
-                    // int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
-
                     // calc weaponHash ammo discharged during this task (and update global for next task)
                     int weaponAmmoCurr = API.GetAmmoInPedWeapon(playerPed, (uint)weaponHashSel);
                     int weapAmmoDischarge = LAST_WEAPON_AMMO_CNT - weaponAmmoCurr; // NOTE: calc total discharge amnt incase frames/tasks are missed
-                    hlog($"weaponAmmoCurr: {weaponAmmoCurr}, weapAmmoDischarge: {weapAmmoDischarge}", true, false); // debug, screen
+                    hlog($"weaponAmmoCurr: {weaponAmmoCurr}, weapAmmoDischarge: {weapAmmoDischarge}", false, false); // debug, screen
                     
                     // calc loaded ammo for HUD update
                     int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
