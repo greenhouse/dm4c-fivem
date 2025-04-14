@@ -7,12 +7,14 @@
                     NOTE: user-name & password will be created during ubuntu server install process
                 - this also creates ssh configs & keys (maybe needed) in '/etc/ssh/'
     - run ubuntu instance
+
     - get VM ubuntu IP address (on ubuntu side)
         $ ifconfig
         NOTE: if virtual box network config is set to NAT
             > output will be 10.0.2.x (default to NAT)
         NOTE: if virtual box network config is set to Bridge Adapter
             > output will be 192.168.x.x (default to bridge, uses host mac OSx ip range)
+
     - Enable/test ssh connection (x2) -> Configure Port Forwarding / networking in VirtualBox
         Open VirtualBox, select your VM, and go to Settings > Network > Adapter 1.
             1) Set to NAT.
@@ -119,6 +121,7 @@
 
         Link to mounted FiveM Resources to standard server deploy path
             $ ln -s /mnt/dm4c-fivem /srv/dm4c-fivem
+
     - Install .net core on ubuntu VM
         # ref: https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#set-environment-variables-system-wide
         # NOTE_SUCCESS: appears to work fine on ubuntu 18.0.x & 22.0.x, but NOT ubuntu 24.0.x (but maybe i messed up and tried 'apt' first like grok suggested below)
@@ -145,6 +148,7 @@
         $ cd /srv/dm4c-fivem/server-data
         $ ../_server/run.sh +exec local.cfg
 
+## setup local VM (virtual box) ubuntu instance -> yarn error with local ubuntu vm
     - NOTE_ERROR_041325 (yarn): yarn issue during local ubunut run (leaks to 'webpack' & 'chat' resource issue)
         - yarn seems to fail on local VM ubuntu-22, but NOT on remove AWS ubuntu-22 server
         - grok says this is a node.js requirement for loading and install dependencies
