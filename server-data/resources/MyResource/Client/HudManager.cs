@@ -14,6 +14,7 @@ namespace DeathmatchClient
         private int RESERVE_AMMO = 0;
         private int LAST_WEAPON_AMMO_CNT = 0;
         private int LAST_WEAPONHASH_SELECT = 0; // Track last equipped weapon
+        private bool LAST_DEAD_CHECKED = false; // Debounce death triggers
         private bool hudVisible = true; // Track HUD state
 
         // weapon type to bullet token value
@@ -21,9 +22,11 @@ namespace DeathmatchClient
         private readonly string[] WEAPON_NAME_LIST;
         private readonly Dictionary<int, int> WEAPONHASH_BULLET_VALUE;
         private readonly Dictionary<int, string> WEAPONHASH_TO_NAME;
+        private readonly Dictionary<int, Tuple<int, int, bool>> BULLET_PICKUPS = new Dictionary<int, Tuple<int, int, bool>>(); // <pickupId <pickupHandle, bulletAmnt, isPickedUp>>
 
         public HudManager()
         {
+            // init globals
             WEAPON_NAME_LIST = new string[]
             {
                 "WEAPON_PISTOL",       // Index 0
@@ -56,11 +59,29 @@ namespace DeathmatchClient
                 { unchecked(API.GetHashKey(WEAPON_NAME_LIST[6])), WEAPON_NAME_LIST[6] }          // Homing Launcher
             };
 
+            // NOTE: these registers depend on globals above
+            RegisterEventHanlders();
+            RegisterTickHandlers();
+            RegisterCommands();
+        }
+
+        /* -------------------------------------------------------- */
+        /* PRIVATE - initialization support
+        /* -------------------------------------------------------- */
+        private void RegisterEventHanlders() {
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
             EventHandlers["updateAmmoReserve"] += new Action<int>(OnUpdateAmmoReserve);
+            EventHandlers["spawnBulletTokenPickup"] += new Action<String, int, int, Vector3>(OnSpawnBulletTokenPickup);
+            EventHandlers["playerSpawned"] += new Action(OnPlayerSpawned);
+            
+        }
+        private void RegisterTickHandlers() {
             Tick += UpdateHud;
             Tick += UpdateWeapon;
-
+            Tick += CheckDeath;
+            Tick += CheckPickups;
+        }
+        private void RegisterCommands() {
             // Register test command
             API.RegisterCommand("/togglehud", new Action<int, dynamic>((source, args) =>
             {
@@ -133,7 +154,7 @@ namespace DeathmatchClient
                 TriggerServerEvent("purchaseAmmo", ammo); // Reuse existing event
             }), false);
 
-            // transfer reserve ammo to loaded ammo
+            // transfer reserve ammo to live ammo
             API.RegisterCommand("/loadreserve", new Action<int, dynamic>((source, args) =>
             {
                 if (RESERVE_AMMO == 0)
@@ -162,8 +183,65 @@ namespace DeathmatchClient
                 // Trigger server event to update reserve ammo
                 TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
             }), false);
+
+            // teleport player to new coords
+            API.RegisterCommand("/jump", new Action<int, dynamic>((source, args) =>
+            {
+                List<float> coords = new List<float>();
+                if (args.Count >= 3 && args.Count <= 4) {
+                    if (float.TryParse(args[0].ToString(), out float xCoord)) coords.Add(xCoord);
+                    else hlog($"/jump failed: Invalid jump coord: {args[0]}.", true, false); // debug, screen
+
+                    if (float.TryParse(args[1].ToString(), out float yCoord)) coords.Add(yCoord);
+                    else hlog($"/jump failed: Invalid jump coord: {args[1]}.", true, false); // debug, screen
+
+                    if (float.TryParse(args[2].ToString(), out float zCoord)) coords.Add(zCoord);
+                    else hlog($"/jump failed: Invalid jump coord: {args[2]}.", true, false); // debug, screen
+                    
+                    // API.SetEntityCoords(API.PlayerPedId(), coords[0], coords[1], coords[2], false, false, false, false);
+                    // hlog($"YOU jumped to coords: {coords}", true, true); // debug, screen
+                } else {
+                    hlog($"/jump failed: Invalid arg count", true, true); // debug, screen
+                }      
+                
+                // check for range arg
+                float coordRange = 0;
+                if (args.Count == 4) {
+                    if (float.TryParse(args[3].ToString(), out float range)) coordRange = range;
+                    else hlog($"/jump warn: found Invalid range arg: {args[3]}. defaulting to range {coordRange}", true, false); // debug, screen
+                }
+
+                // execute coord jump
+                OnJumpCommand(coords, coordRange);
+            }), false);
+
+            // manually sync pickups from server side
+            API.RegisterCommand("/syncpickups", new Action<int, dynamic>((source, args) =>
+            {
+                TriggerServerEvent("requestPickupSync"); // Ask server for active pickups
+                hlog("YOU manually requested pickup sync", true, true); // debug, screen
+            }), false);
         }
 
+        /* -------------------------------------------------------- */
+        /* PRIVATE - event hanlders                            
+        /* -------------------------------------------------------- */
+        private void OnPlayerSpawned()
+        {
+            hlog("YOU respawned", true, true); // debug, screen
+            requestPickupSync();
+        }
+        private void OnJumpCommand(List<float> coords, float range=0)
+        {
+            // Teleport player to new coordinates
+            float X = coords[0]+range;
+            float Y = coords[1]+range;
+            float Z = coords[2]+range;
+            API.SetEntityCoords(API.PlayerPedId(), X, Y, Z, false, false, false, false);
+            hlog($"YOU jumped to coords: {X}, {Y}, {Z}", true, true); // debug, screen
+
+            requestPickupSync();
+        }
         private void OnClientResourceStart(string resourceName)
         {
             // Load NUI HUD
@@ -183,20 +261,58 @@ namespace DeathmatchClient
             hlog($"Updating HUD with LIVE_AMMO: {LIVE_AMMO} | RESERVE_AMMO: {RESERVE_AMMO}", true, false); // debug, screen
             UpdateNui(LIVE_AMMO);
         }
-        private void SetPedAmmoWithBulletValue()
+        private void OnSpawnBulletTokenPickup(String playerName, int pickupId, int bulletAmnt, Vector3 deathCoords)
         {
-            // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
-            //  NOTE: uses WEAPONHASH_BULLET_VALUE to calc usable ammo
-            int playerPed = API.PlayerPedId();
-            int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
-            int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
-            int calcAmmoAvail = bulletVal > 0 ? LIVE_AMMO / bulletVal : 0; // calc available ammo using bulletVal for this weapon
-            API.SetPedAmmo(playerPed, (uint)weaponHashSel, calcAmmoAvail);
-
-            // update last ammo count for next task calc
-            LAST_WEAPON_AMMO_CNT = API.GetAmmoInPedWeapon(playerPed, (uint)weaponHashSel);
+            uint pickupHash = (uint)API.GetHashKey("PICKUP_MONEY_VARIABLE");
+            int newPickup = API.CreatePickup(pickupHash, deathCoords.X, deathCoords.Y, deathCoords.Z, 0, bulletAmnt, false, 0);
+            BULLET_PICKUPS[pickupId] = new Tuple<int, int, bool>(newPickup, bulletAmnt, false);
+            hlog($"Player {playerName} Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})", true, true); // debug, screen
         }
 
+        /* -------------------------------------------------------- */
+        /* PRIVATE - frame/task loop support                            
+        /* -------------------------------------------------------- */
+        private async Task CheckPickups()
+        {
+            foreach(var kvp in BULLET_PICKUPS) {
+                int pickupId = kvp.Key;
+                int pickupHandle = BULLET_PICKUPS[pickupId].Item1;
+                bool isPickedUp = BULLET_PICKUPS[pickupId].Item3;
+                if (API.HasPickupBeenCollected(pickupHandle) && !isPickedUp)
+                {
+                    BULLET_PICKUPS[pickupId] = Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, true);
+                    TriggerServerEvent("playerPickedUpAmmo", pickupId);
+                    hlog($"YOU picked-up {BULLET_PICKUPS[pickupId].Item2} reserve $BULLET tokens", true, true);
+                }
+            }
+            await Delay(100); // Check every 100ms to reduce load
+        }
+        private async Task CheckDeath()
+        {
+            int playerPed = API.PlayerPedId();
+            bool isDead = API.IsPedFatallyInjured(playerPed);
+
+            if (isDead && !LAST_DEAD_CHECKED)
+            {
+                Vector3 deathCoords = API.GetEntityCoords(playerPed, false);
+                hlog($"GetEntityCoords -> deathCoords: {deathCoords.X} {deathCoords.Y} {deathCoords.Z}", true, false); // debug, screen
+                TriggerServerEvent("playerDiedDropAmmo", LIVE_AMMO, deathCoords);
+                hlog($"YOU died, dropping {LIVE_AMMO} 'live' $BULLET tokens at: {deathCoords}", true, false); // debug, screen
+                hlog($"YOU died, dropping {LIVE_AMMO} 'live' $BULLET tokens", false, true); // debug, screen
+                LAST_DEAD_CHECKED = true;
+
+                // Reset live ammo on death
+                LIVE_AMMO = 0; 
+                UpdateNui(LIVE_AMMO);
+                await Delay(2000); // Cooldown to prevent repeat triggers
+            }
+            else if (!isDead && LAST_DEAD_CHECKED)
+            {
+                LAST_DEAD_CHECKED = false; // Reset after respawn
+            }
+
+            await Delay(100); // Check every 100ms
+        }
         private async Task UpdateWeapon()
         {
             // get current player w/ weaponHash selected
@@ -262,6 +378,29 @@ namespace DeathmatchClient
             await Task.FromResult(0);
         }
 
+        /* -------------------------------------------------------- */
+        /* PRIVATE - algorthimic support                            
+        /* -------------------------------------------------------- */
+        private void requestPickupSync()
+        {
+            // Request active pickups from server
+            BULLET_PICKUPS.Clear(); // Clear old pickups (just in case, but shouldn't matter)
+            TriggerServerEvent("requestPickupSync");
+            hlog("YOU requested pickup sync", true, true); // debug, screen
+        }
+        private void SetPedAmmoWithBulletValue()
+        {
+            // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
+            //  NOTE: uses WEAPONHASH_BULLET_VALUE to calc usable ammo
+            int playerPed = API.PlayerPedId();
+            int weaponHashSel = API.GetSelectedPedWeapon(playerPed);
+            int bulletVal = WEAPONHASH_BULLET_VALUE[weaponHashSel]; // get $BULLET token value per weapon type
+            int calcAmmoAvail = bulletVal > 0 ? LIVE_AMMO / bulletVal : 0; // calc available ammo using bulletVal for this weapon
+            API.SetPedAmmo(playerPed, (uint)weaponHashSel, calcAmmoAvail);
+
+            // update last ammo count for next task calc
+            LAST_WEAPON_AMMO_CNT = API.GetAmmoInPedWeapon(playerPed, (uint)weaponHashSel);
+        }
         private void UpdateNui(int loadedAmmo = -1)
         {
             if (loadedAmmo == -1)
@@ -273,7 +412,6 @@ namespace DeathmatchClient
                 ""reserve"": {RESERVE_AMMO}
             }}");
         }
-
         private void hlog(string message, bool debug, bool screen)
         {
             if (debug) Debug.WriteLine(message);
