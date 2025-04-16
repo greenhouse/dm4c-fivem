@@ -9,11 +9,10 @@ namespace DeathmatchServer
     public class AmmoManager : BaseScript
     {
         // Player handle -> reserve ammo
-        private Dictionary<int, int> playerReserves = new Dictionary<int, int>(); 
+        private Dictionary<int, int> PLAYER_RESERVES = new Dictionary<int, int>(); 
         //  <pickupId, <bulletAmnt, playerPedDrop, playerPedPickup, isPickedUp>>
-        private Dictionary<int, Tuple<int, int, Vector3, int, bool>> pickups = new Dictionary<int, Tuple<int, int, Vector3, int, bool>>();
-            
-        private int nextPickupId = 1;
+        private Dictionary<int, Tuple<int, int, Vector3, int, bool>> PICKUPS = new Dictionary<int, Tuple<int, int, Vector3, int, bool>>();
+        private int NEXT_PICKUP_ID = 1;
         public AmmoManager()
         {
             EventHandlers["playerSpawned"] += new Action<Player>(OnPlayerSpawned);
@@ -27,11 +26,11 @@ namespace DeathmatchServer
         private void OnPlayerSpawned([FromSource] Player player)
         {
             int playerHandle = int.Parse(player.Handle);
-            if (!playerReserves.ContainsKey(playerHandle))
+            if (!PLAYER_RESERVES.ContainsKey(playerHandle))
             {
-                playerReserves[playerHandle] = 0; // Initialize reserve ammo
+                PLAYER_RESERVES[playerHandle] = 0; // Initialize reserve ammo
             }
-            player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandle]);
+            player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandle]);
         }
 
         // private void OnPurchaseAmmo([FromSource] Player player, int amount)
@@ -39,31 +38,31 @@ namespace DeathmatchServer
         //     int playerHandle = int.Parse(player.Handle);
         //     // note_041225: 'GetValueOrDefault' fails to compile, even w/ 'using System.Linq;'
         //     //  alt 'OnPurchaseAmmo' integration below
-        //     playerReserves[playerHandle] = playerReserves.GetValueOrDefault(playerHandle, 0) + amount;
-        //     player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandle]);
-        //     Debug.WriteLine($"{player.Name} purchased {amount} ammo. New reserve: {playerReserves[playerHandle]}");
+        //     PLAYER_RESERVES[playerHandle] = PLAYER_RESERVES.GetValueOrDefault(playerHandle, 0) + amount;
+        //     player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandle]);
+        //     Debug.WriteLine($"{player.Name} purchased {amount} ammo. New reserve: {PLAYER_RESERVES[playerHandle]}");
         // }
         private void OnPurchaseAmmo([FromSource] Player player, int amount)
         {
             int playerHandle = int.Parse(player.Handle);
-            int currentReserve = playerReserves.ContainsKey(playerHandle) ? playerReserves[playerHandle] : 0;
-            playerReserves[playerHandle] = currentReserve + amount;
-            player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandle]);
-            Debug.WriteLine($"{player.Name} purchased {amount} ammo. New reserve: {playerReserves[playerHandle]}");
+            int currentReserve = PLAYER_RESERVES.ContainsKey(playerHandle) ? PLAYER_RESERVES[playerHandle] : 0;
+            PLAYER_RESERVES[playerHandle] = currentReserve + amount;
+            player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandle]);
+            Debug.WriteLine($"{player.Name} purchased {amount} ammo. New reserve: {PLAYER_RESERVES[playerHandle]}");
         }
         private void OnLoadReserveAmmo([FromSource] Player player, int amount)
         {
             int playerHandle = int.Parse(player.Handle);
-            int currentReserve = playerReserves.ContainsKey(playerHandle) ? playerReserves[playerHandle] : 0;
-            playerReserves[playerHandle] = currentReserve - amount;
-            player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandle]);
-            Debug.WriteLine($"{player.Name} loaded {amount} reserve ammo. New reserve: {playerReserves[playerHandle]}");
+            int currentReserve = PLAYER_RESERVES.ContainsKey(playerHandle) ? PLAYER_RESERVES[playerHandle] : 0;
+            PLAYER_RESERVES[playerHandle] = currentReserve - amount;
+            player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandle]);
+            Debug.WriteLine($"{player.Name} loaded {amount} reserve ammo. New reserve: {PLAYER_RESERVES[playerHandle]}");
         }
         private void OnPlayerDiedDropAmmo([FromSource] Player player, int bulletAmnt, Vector3 deathCoords)
         {
             int playerHandleDrop = int.Parse(player.Handle);
-            int pickupId = nextPickupId++;
-            pickups[pickupId] = new Tuple<int, int, Vector3, int, bool>(bulletAmnt, playerHandleDrop, deathCoords, -1, false);
+            int pickupId = NEXT_PICKUP_ID++;
+            PICKUPS[pickupId] = new Tuple<int, int, Vector3, int, bool>(bulletAmnt, playerHandleDrop, deathCoords, -1, false);
             TriggerClientEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
             Debug.WriteLine($"Player {player.Name}({playerHandleDrop}) Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})");
         }
@@ -73,35 +72,35 @@ namespace DeathmatchServer
             int playerHandlePickup = int.Parse(player.Handle);
 
             // validate not already picked up
-            if (pickups[pickupId].Item5 == true) { 
+            if (PICKUPS[pickupId].Item5 == true) { 
                 Debug.WriteLine($"ERROR: Player {player.Name}({playerHandlePickup}) tried pick-up on id: {pickupId}; $BULLET token already picked-up. returning");
                 return;
             }
             
             // calc new reserve amount
-            int oldReserve = playerReserves.ContainsKey(playerHandlePickup) ? playerReserves[playerHandlePickup] : 0;
-            int bullAmntPickup = pickups[pickupId].Item1;
+            int oldReserve = PLAYER_RESERVES.ContainsKey(playerHandlePickup) ? PLAYER_RESERVES[playerHandlePickup] : 0;
+            int bullAmntPickup = PICKUPS[pickupId].Item1;
             int newReserve = oldReserve + bullAmntPickup;
 
             // set pickup player new reserve amount
-            playerReserves[playerHandlePickup] = newReserve;
+            PLAYER_RESERVES[playerHandlePickup] = newReserve;
 
             // update pickupId to picked-up = true (w/ playerHandlePickup)
-            pickups[pickupId] = Tuple.Create(pickups[pickupId].Item1, pickups[pickupId].Item2, pickups[pickupId].Item3, playerHandlePickup, true);
+            PICKUPS[pickupId] = Tuple.Create(PICKUPS[pickupId].Item1, PICKUPS[pickupId].Item2, PICKUPS[pickupId].Item3, playerHandlePickup, true);
 
             // trigger pickup client to update their reserve amount
-            player.TriggerEvent("updateAmmoReserve", playerReserves[playerHandlePickup]);
+            player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandlePickup]);
             Debug.WriteLine($"Player {player.Name}({playerHandlePickup}) Picked-up {bullAmntPickup} $BULLET tokens _ Reserve (Old->New): {oldReserve} -> {newReserve}");
         }
         private void OnRequestPickupSync([FromSource] Player player)
         {
-            foreach (var kvp in pickups)
+            foreach (var kvp in PICKUPS)
             {
                 int pickupId = kvp.Key;
-                bool isPickedUp = pickups[pickupId].Item5;
+                bool isPickedUp = PICKUPS[pickupId].Item5;
                 if (!isPickedUp) { 
-                    int bulletAmnt = pickups[pickupId].Item1;
-                    Vector3 deathCoords = pickups[pickupId].Item3;
+                    int bulletAmnt = PICKUPS[pickupId].Item1;
+                    Vector3 deathCoords = PICKUPS[pickupId].Item3;
                     player.TriggerEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
                     Debug.WriteLine($"Sent $BULLET token pickup-sync to client: Player {player.Name}({int.Parse(player.Handle)}) _ pickupId: {pickupId} _ $BULLET token amount: {bulletAmnt} _ coords: {deathCoords}");
 

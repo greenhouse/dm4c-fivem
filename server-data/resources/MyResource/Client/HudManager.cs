@@ -197,9 +197,6 @@ namespace DeathmatchClient
 
                     if (float.TryParse(args[2].ToString(), out float zCoord)) coords.Add(zCoord);
                     else hlog($"/jump failed: Invalid jump coord: {args[2]}.", true, false); // debug, screen
-                    
-                    // API.SetEntityCoords(API.PlayerPedId(), coords[0], coords[1], coords[2], false, false, false, false);
-                    // hlog($"YOU jumped to coords: {coords}", true, true); // debug, screen
                 } else {
                     hlog($"/jump failed: Invalid arg count", true, true); // debug, screen
                 }      
