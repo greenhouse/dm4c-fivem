@@ -15,7 +15,7 @@ namespace MyResource.Client
         [Tick]
         public Task OnTick()
         {
-            DrawRect(0.5f, 0.5f, 0.5f, 0.5f, 255, 255, 255, 150);
+            // DrawRect(0.5f, 0.5f, 0.5f, 0.5f, 255, 255, 255, 150);
 
             return Task.FromResult(0);
         }
