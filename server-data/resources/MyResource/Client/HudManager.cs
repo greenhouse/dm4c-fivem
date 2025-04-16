@@ -79,7 +79,8 @@ namespace DeathmatchClient
             Tick += UpdateHud;
             Tick += UpdateWeapon;
             Tick += CheckDeath;
-            Tick += CheckPickups;
+            Tick += CheckForPickup;
+            Tick += SyncPickups;
         }
         private void RegisterCommands() {
             // Register test command
@@ -269,7 +270,20 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* PRIVATE - frame/task loop support                            
         /* -------------------------------------------------------- */
-        private async Task CheckPickups()
+        private async Task SyncPickups()
+        {
+            // NOTE: requestPickupSync() triggers -> server side "requestPickupSync" 
+            //  server side "requestPickupSync" -> checks for non-picked up $BULLET tokens
+            //  server side "requestPickupSync" triggers -> client side "spawnBulletTokenPickup"
+            //  client side "spawnBulletTokenPickup" -> invokes API.CreatePickup(<coords>)
+            //  HOWEVER, game core doesn't generate pickups until player is within (some) range
+            //   HENCE, requesting sync w/ (some) delay to compensate for player travel time
+            requestPickupSync();
+
+            // Check every 10000ms (10 seconds)
+            await Delay(10000); 
+        }
+        private async Task CheckForPickup()
         {
             foreach(var kvp in BULLET_PICKUPS) {
                 int pickupId = kvp.Key;
