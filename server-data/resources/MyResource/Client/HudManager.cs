@@ -242,12 +242,23 @@ namespace DeathmatchClient
                     string type = args[0].ToString();
                     vehicleHash = type == "2" ? (uint)API.GetHashKey("SEASHARK2") : (uint)API.GetHashKey("SEASHARK");
                     vehicleHash = type == "3" ? (uint)API.GetHashKey("SEASHARK3") : (uint)API.GetHashKey("SEASHARK");
+                    vehicleHash = type == "4" ? (uint)API.GetHashKey("SPEEDER") : (uint)API.GetHashKey("SEASHARK");
                 }
 
                 // Spawn the waverunner near the player
                 int playerPed = API.PlayerPedId();
                 Vector3 playerPos = API.GetEntityCoords(playerPed, true);
                 int vehicle = API.CreateVehicle(vehicleHash, playerPos.X, playerPos.Y, playerPos.Z + 2.0f, API.GetEntityHeading(playerPed), true, false);
+
+                // Place the player in the vehicle
+                API.SetPedIntoVehicle(playerPed, vehicle, -1); // -1 is the driver seat
+
+                // Enable weapon usage in the vehicle -> NOTE_041625: not working, can't seem to ride with weapon & shoot
+                API.SetPedConfigFlag(playerPed, 184, true); // Allow weapons in vehicle
+                API.SetPedCanSwitchWeapon(playerPed, true); // Allow weapon switching
+                // API.SetPlayerCanDoDriveBy(PlayerId(), true); // Enable drive-by shooting
+                // API.SetCurrentPedWeapon(playerPed, (uint)API.GetHashKey("WEAPON_PISTOL"), true); // Equip a default weapon
+                
                 hlog($"YOU manually requested a boat type: {vehicleHash}", true, true); // debug, screen
             }), false);
             
