@@ -11,6 +11,7 @@ namespace DeathmatchClient
 {
     public class HudManager : BaseScript
     {
+        private int F4_KEY_RESERVE_AMNT = 200; // default reserve ammo amount
         private int LIVE_AMMO = 0;
         private int RESERVE_AMMO = 0;
         private int LAST_WEAPON_AMMO_CNT = 0;
@@ -88,6 +89,7 @@ namespace DeathmatchClient
             Tick += SyncPickups;
             Tick += CreatePickups;
             Tick += DrawPickups;
+            Tick += OnKeyPress;
         }
         private void RegisterCommands() {
             // Register test command
@@ -161,7 +163,7 @@ namespace DeathmatchClient
                     return;
                 }
 
-                // set reserve ammo (TODO: need to acceept arg for amount)
+                // set reserve ammo
                 int ammo = RESERVE_AMMO;
                 if (args.Count > 0) {
                     if (int.TryParse(args[0].ToString(), out int parsedAmmo)) {
@@ -256,10 +258,16 @@ namespace DeathmatchClient
                 // Enable weapon usage in the vehicle -> NOTE_041625: not working, can't seem to ride with weapon & shoot
                 API.SetPedConfigFlag(playerPed, 184, true); // Allow weapons in vehicle
                 API.SetPedCanSwitchWeapon(playerPed, true); // Allow weapon switching
-                // API.SetPlayerCanDoDriveBy(PlayerId(), true); // Enable drive-by shooting
-                // API.SetCurrentPedWeapon(playerPed, (uint)API.GetHashKey("WEAPON_PISTOL"), true); // Equip a default weapon
-                
+                API.SetPlayerCanDoDriveBy(API.PlayerId(), true); // Enable drive-by shooting
+                API.SetCurrentPedWeapon(playerPed, (uint)API.GetHashKey("WEAPON_PISTOL"), true); // Equip a default weapon
+
                 hlog($"YOU manually requested a boat type: {vehicleHash}", true, true); // debug, screen
+            }), false);
+
+            // Register the /quit command
+            API.RegisterCommand("/quit", new Action<int, dynamic>((source, args) =>
+            {
+                QuitServer(); // Trigger server event to disconnect
             }), false);
             
         }
@@ -336,6 +344,39 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* PRIVATE - frame/task loop support                            
         /* -------------------------------------------------------- */
+        private async Task OnKeyPress()
+        {
+            // Keybind logic
+            if (API.IsControlJustPressed(0, 288)) { // F1
+                hlog("F1 -> TODO: show HUD for all 'F' key presses", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 289)) { // F2 -> show HUD weapon ammo to $BULLET pricing
+                hlog("F2 -> TODO: show HUD weapon ammo to $BULLET pricing", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 290)) { // F3 -> get all weapons
+                giveDefaultWeapons();
+                hlog("F3: got weapons", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 291)) { // F4 -> get some reserve $BULLET tokens
+                TriggerServerEvent("purchaseAmmo", F4_KEY_RESERVE_AMNT); // Reuse existing event
+                hlog($"F4: got {F4_KEY_RESERVE_AMNT} reserve $BULLET tokens", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 292)) { // F5 -> load ammo from reserve
+                int ammo = RESERVE_AMMO > 0 ? RESERVE_AMMO / 2 : 0; // default reserve ammo amount
+                if (ammo == 0) hlog("not enouch reserve $BULLET to load, use F4 or /givereserve <amnt>", true, true); // debug, screen
+
+                // increment live ammo & Trigger server event to update reserve ammo
+                LIVE_AMMO += ammo;
+                TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
+                hlog("F5: loaded half your reserve $BULLET into ammo", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 293)) { // F6 -> quit/leave server
+                QuitServer();
+                hlog("F6: quit server", true, true); // debug, screen
+            }
+            
+            await Delay(10);
+        }
         private async Task DrawPickups() {
             // Draw markers for all active pickups
             foreach (var kvp in BULLET_PICKUPS)
@@ -520,6 +561,13 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* PRIVATE - algorthimic support                            
         /* -------------------------------------------------------- */
+        private void QuitServer() {
+            // Notify the player
+            hlog("YOU are Disconnecting from the server...", true, true); // debug, screen
+
+            // Trigger server event to disconnect
+            TriggerServerEvent("playerQuit");
+        }
         private void giveDefaultWeapons() {
             // Give default weapons with 0 ammo
             int playerPed = API.PlayerPedId();
