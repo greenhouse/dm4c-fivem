@@ -22,7 +22,7 @@ namespace DeathmatchClient
         private readonly string[] WEAPON_NAME_LIST;
         private readonly Dictionary<int, int> WEAPONHASH_BULLET_VALUE;
         private readonly Dictionary<int, string> WEAPONHASH_TO_NAME;
-        private readonly Dictionary<int, Tuple<int, int, bool>> BULLET_PICKUPS = new Dictionary<int, Tuple<int, int, bool>>(); // <pickupId <pickupHandle, bulletAmnt, isPickedUp>>
+        private readonly Dictionary<int, Tuple<int, Vector3, int, int, bool>> BULLET_PICKUPS = new Dictionary<int, Tuple<int, Vector3, int, int, bool>>(); // <pickupId <pickupHandle, deathCoords, bulletAmnt, bilp, isPickedUp>>
 
         public HudManager()
         {
@@ -72,6 +72,8 @@ namespace DeathmatchClient
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
             EventHandlers["updateAmmoReserve"] += new Action<int>(OnUpdateAmmoReserve);
             EventHandlers["spawnBulletTokenPickup"] += new Action<String, int, int, Vector3>(OnSpawnBulletTokenPickup);
+            EventHandlers["removeBulletTokenPickup"] += new Action<String, int>(OnRemoveBulletTokenPickup);
+            
             EventHandlers["playerSpawned"] += new Action(OnPlayerSpawned);
             
         }
@@ -81,6 +83,8 @@ namespace DeathmatchClient
             Tick += CheckDeath;
             Tick += CheckForPickup;
             Tick += SyncPickups;
+            Tick += CreatePickups;
+            Tick += DrawPickups;
         }
         private void RegisterCommands() {
             // Register test command
@@ -261,15 +265,93 @@ namespace DeathmatchClient
         }
         private void OnSpawnBulletTokenPickup(String playerName, int pickupId, int bulletAmnt, Vector3 deathCoords)
         {
+            // Add blip to minimap (regardless of player range)
+            int blip = API.AddBlipForCoord(deathCoords.X, deathCoords.Y, deathCoords.Z);
+            API.SetBlipSprite(blip, 1); // Circle sprite
+            API.SetBlipColour(blip, 46); // Gold color
+            API.SetBlipScale(blip, 0.8f);
+            API.SetBlipAsShortRange(blip, true); // Only show when nearby (optional)
+            // pickupBlips[pickupId] = blip;
+
+            // Draw marker above pickup (fails if player not in range)
+            Vector3 playerPos = Game.PlayerPed.Position;
+            DrawBulletTokenPickupMarker(playerPos, deathCoords, bulletAmnt); 
+
+            // generate pickup and store in BULLET_PICKUPS
             uint pickupHash = (uint)API.GetHashKey("PICKUP_MONEY_VARIABLE");
             int newPickup = API.CreatePickup(pickupHash, deathCoords.X, deathCoords.Y, deathCoords.Z, 0, bulletAmnt, false, 0);
-            BULLET_PICKUPS[pickupId] = new Tuple<int, int, bool>(newPickup, bulletAmnt, false);
-            hlog($"Player {playerName} Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})", true, true); // debug, screen
+            BULLET_PICKUPS[pickupId] = new Tuple<int, Vector3, int, int, bool>(newPickup, deathCoords, bulletAmnt, blip, false);
+            hlog($"Player {playerName} Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})", true, false); // debug, screen
+        }
+        private void OnRemoveBulletTokenPickup(String playerName, int pickupId)
+        {
+            int blip = BULLET_PICKUPS[pickupId].Item4;
+            API.RemoveBlip(ref blip);
+
+            BULLET_PICKUPS.Remove(pickupId);
+            hlog($"Player {playerName} Removed $BULLET token pickup _ pickupId: {pickupId}", true, true); // debug, screen
         }
 
         /* -------------------------------------------------------- */
         /* PRIVATE - frame/task loop support                            
         /* -------------------------------------------------------- */
+        private async Task DrawPickups() {
+            // Draw markers for all active pickups
+            foreach (var kvp in BULLET_PICKUPS)
+            {
+                int pickupId = kvp.Key;
+                // int pickupHandle = BULLET_PICKUPS[pickupId].Item1;
+                Vector3 deathCoords = BULLET_PICKUPS[pickupId].Item2;
+                int bulletAmnt = BULLET_PICKUPS[pickupId].Item3;
+                bool isPickedUp = BULLET_PICKUPS[pickupId].Item5;
+                Vector3 playerPos = Game.PlayerPed.Position;
+
+                // Check if player is near pickup & $BULLET is not picked up yet
+                //  NOTE: isPickedUp (.Item5) not needed anymore w/ removeBulletTokenPickup integration
+                //      ie. Tick CheckForPickup trigger -> server side playerPickedUpAmmo
+                //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
+                //          client side removeBulletTokenPickup -> invokes BULLET_PICKUPS.Remove(pickupId);
+                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < 10000f)
+                {
+                    // Draw marker above pickup (fails if player not in range)
+                    //  NOTE: fivem docs says needs to be called every tick/frame
+                    DrawBulletTokenPickupMarker(playerPos, deathCoords, bulletAmnt);
+
+                    // grok say delay 500 to avoid overloading w/ draw calls
+                    // await Delay(500); // wait 500ms (0.5 sec)
+                }
+            }
+            await Task.FromResult(0);
+        }
+        private async Task CreatePickups() {
+            // Draw markers for all active pickups
+            foreach (var kvp in BULLET_PICKUPS)
+            {
+                int pickupId = kvp.Key;
+                // int pickupHandle = BULLET_PICKUPS[pickupId].Item1;
+                Vector3 deathCoords = BULLET_PICKUPS[pickupId].Item2;
+                int bulletAmnt = BULLET_PICKUPS[pickupId].Item3;
+                bool isPickedUp = BULLET_PICKUPS[pickupId].Item5;
+                Vector3 playerPos = Game.PlayerPed.Position;
+
+                // Check if player is near pickup & $BULLET is not picked up yet
+                //  NOTE: isPickedUp (.Item5) not needed anymore w/ removeBulletTokenPickup integration
+                //      ie. Tick CheckForPickup trigger -> server side playerPickedUpAmmo
+                //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
+                //          client side removeBulletTokenPickup -> invokes BULLET_PICKUPS.Remove(pickupId);
+                // note: 500f is way too far for game core to display (i think)
+                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < 500f)
+                {
+                    // generate pickup
+                    uint pickupHash = (uint)API.GetHashKey("PICKUP_MONEY_VARIABLE");
+                    int newPickup = API.CreatePickup(pickupHash, deathCoords.X, deathCoords.Y, deathCoords.Z, 0, bulletAmnt, false, 0);
+
+                    // avoid overloading w/ create calls
+                    await Delay(1000); // wait 1000ms (1 sec)
+                }
+            }
+            await Task.FromResult(0);
+        }
         private async Task SyncPickups()
         {
             // NOTE: requestPickupSync() triggers -> server side "requestPickupSync" 
@@ -278,22 +360,27 @@ namespace DeathmatchClient
             //  client side "spawnBulletTokenPickup" -> invokes API.CreatePickup(<coords>)
             //  HOWEVER, game core doesn't generate pickups until player is within (some) range
             //   HENCE, requesting sync w/ (some) delay to compensate for player travel time
+            //
+            // UPDTE: the above might not be needed, if CreatePickups works correcly (ie. Tick checking distance)
+            //  HENCE, this Tick SyncPickups is only needed to gradually keep sync (precautionary, 60 sec maybe?)
             requestPickupSync();
 
-            // Check every 10000ms (10 seconds)
-            await Delay(10000); 
+            // Check every 60000ms (60 seconds)
+            await Delay(60000); 
         }
         private async Task CheckForPickup()
         {
             foreach(var kvp in BULLET_PICKUPS) {
                 int pickupId = kvp.Key;
                 int pickupHandle = BULLET_PICKUPS[pickupId].Item1;
-                bool isPickedUp = BULLET_PICKUPS[pickupId].Item3;
+                bool isPickedUp = BULLET_PICKUPS[pickupId].Item5;
                 if (API.HasPickupBeenCollected(pickupHandle) && !isPickedUp)
                 {
-                    BULLET_PICKUPS[pickupId] = Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, true);
+                    // NOTE: new removeBulletTokenPickup, allows no need to set BULLET_PICKUPS isPickedUp = true 
+                    //  ie. bool isPickedUp can be removed from BULLET_PICKUPS data structure
+                    // BULLET_PICKUPS[pickupId] = Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, true);
                     TriggerServerEvent("playerPickedUpAmmo", pickupId);
-                    hlog($"YOU picked-up {BULLET_PICKUPS[pickupId].Item2} reserve $BULLET tokens", true, true);
+                    hlog($"YOU picked-up {BULLET_PICKUPS[pickupId].Item3} reserve $BULLET tokens", true, true);
                 }
             }
             await Delay(100); // Check every 100ms to reduce load
@@ -395,9 +482,9 @@ namespace DeathmatchClient
         private void requestPickupSync()
         {
             // Request active pickups from server
-            BULLET_PICKUPS.Clear(); // Clear old pickups (just in case, but shouldn't matter)
+            // BULLET_PICKUPS.Clear(); // Clear old pickups (just in case, but shouldn't matter)
             TriggerServerEvent("requestPickupSync");
-            hlog("YOU requested pickup sync", true, true); // debug, screen
+            hlog("YOU requested pickup sync", true, false); // debug, screen
         }
         private void SetPedAmmoWithBulletValue()
         {
@@ -427,6 +514,43 @@ namespace DeathmatchClient
         {
             if (debug) Debug.WriteLine(message);
             if (screen) Screen.ShowNotification(message);
+        }
+    
+        /* -------------------------------------------------------- */
+        /* PRIVATE - display support                            
+        /* -------------------------------------------------------- */
+        private void DrawBulletTokenPickupMarker(Vector3 playerPos, Vector3 deathCoords, int bulletAmnt)
+        {
+            // Draw marker above pickup (if player in range)
+            API.DrawMarker(
+                1, // Marker type (ground circle)
+                deathCoords.X, deathCoords.Y, deathCoords.Z - 0.9f,
+                0f, 0f, 0f, // Direction
+                0f, 0f, 0f, // Rotation
+                1f, 1f, 0.5f, // Scale
+                255, 215, 0, 100, // Gold color with alpha
+                false, true, 2, false, null, null, false
+            );
+
+            // Draw floating text (if player in range)
+            float dist = Vector3.Distance(playerPos, deathCoords);
+            DrawText3D(deathCoords + new Vector3(0f, 0f, 0.5f), $"{bulletAmnt} $BULLET tokens\n DIST: {dist:F2}m");
+        }
+        private void DrawText3D(Vector3 pos, string text)
+        {
+            float screenX = 0f, screenY = 0f;
+            bool onScreen = API.World3dToScreen2d(pos.X, pos.Y, pos.Z, ref screenX, ref screenY);
+            if (onScreen)
+            {
+                API.SetTextScale(0.35f, 0.35f);
+                API.SetTextFont(4);
+                API.SetTextProportional(true);
+                API.SetTextColour(255, 255, 255, 255);
+                API.SetTextOutline();
+                API.BeginTextCommandDisplayText("STRING");
+                API.AddTextComponentSubstringPlayerName(text);
+                API.EndTextCommandDisplayText(screenX, screenY);
+            }
         }
     }
 }

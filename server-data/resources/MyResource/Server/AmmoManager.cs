@@ -63,7 +63,17 @@ namespace DeathmatchServer
             int playerHandleDrop = int.Parse(player.Handle);
             int pickupId = NEXT_PICKUP_ID++;
             PICKUPS[pickupId] = new Tuple<int, int, Vector3, int, bool>(bulletAmnt, playerHandleDrop, deathCoords, -1, false);
+
+            // Notify ALL clients to spawn the $BULLET token pickup
             TriggerClientEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
+            
+            // Notify only NEARBY clients to spawn the $BULLET TOKEN pickup
+            // foreach (Player p in Players)
+            // {
+            //     if (Vector3.Distance(p.Character.Position, deathCoords) < 50f)
+            //         p.TriggerEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
+            // }
+            
             Debug.WriteLine($"Player {player.Name}({playerHandleDrop}) Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})");
         }
 
@@ -90,6 +100,10 @@ namespace DeathmatchServer
 
             // trigger pickup client to update their reserve amount
             player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandlePickup]);
+
+            // Notify ALL clients to remove the $BULLET token pickup
+            TriggerClientEvent("removeBulletTokenPickup", player.Name, pickupId);
+
             Debug.WriteLine($"Player {player.Name}({playerHandlePickup}) Picked-up {bullAmntPickup} $BULLET tokens _ Reserve (Old->New): {oldReserve} -> {newReserve}");
         }
         private void OnRequestPickupSync([FromSource] Player player)
@@ -102,8 +116,7 @@ namespace DeathmatchServer
                     int bulletAmnt = PICKUPS[pickupId].Item1;
                     Vector3 deathCoords = PICKUPS[pickupId].Item3;
                     player.TriggerEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
-                    Debug.WriteLine($"Sent $BULLET token pickup-sync to client: Player {player.Name}({int.Parse(player.Handle)}) _ pickupId: {pickupId} _ $BULLET token amount: {bulletAmnt} _ coords: {deathCoords}");
-
+                    // Debug.WriteLine($"Sent $BULLET token pickup-sync to client: Player {player.Name}({int.Parse(player.Handle)}) _ pickupId: {pickupId} _ $BULLET token amount: {bulletAmnt} _ coords: {deathCoords}");
                 }
             }
         }
