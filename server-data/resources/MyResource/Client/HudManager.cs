@@ -232,6 +232,25 @@ namespace DeathmatchClient
                     hlog("YOU manually requested resource stop: no args", true, false); // debug, screen
                 }
             }), false);
+
+            // manually sync pickups from server side
+            API.RegisterCommand("/giveboat", new Action<int, dynamic>((source, args) =>
+            {
+                uint vehicleHash = (uint)API.GetHashKey("SEASHARK");
+                if (args.Count > 0)
+                {
+                    string type = args[0].ToString();
+                    vehicleHash = type == "2" ? (uint)API.GetHashKey("SEASHARK2") : (uint)API.GetHashKey("SEASHARK");
+                    vehicleHash = type == "3" ? (uint)API.GetHashKey("SEASHARK3") : (uint)API.GetHashKey("SEASHARK");
+                }
+
+                // Spawn the waverunner near the player
+                int playerPed = API.PlayerPedId();
+                Vector3 playerPos = API.GetEntityCoords(playerPed, true);
+                int vehicle = API.CreateVehicle(vehicleHash, playerPos.X, playerPos.Y, playerPos.Z + 2.0f, API.GetEntityHeading(playerPed), true, false);
+                hlog($"YOU manually requested a boat type: {vehicleHash}", true, true); // debug, screen
+            }), false);
+            
         }
 
         /* -------------------------------------------------------- */
