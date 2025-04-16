@@ -4,6 +4,7 @@ using CitizenFX.Core.Native;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+// using System.Diagnostics;
 // using Mono.CSharp;
 
 namespace DeathmatchClient
@@ -36,6 +37,7 @@ namespace DeathmatchClient
                 "WEAPON_GRENADE",      // Index 4
                 "WEAPON_RPG",          // Index 5
                 "WEAPON_HOMINGLAUNCHER", // Index 6
+                "GADGET_PARACHUTE", // Index 7
             };
             WEAPONHASH_BULLET_VALUE = new Dictionary<int, int>
             {
@@ -46,7 +48,8 @@ namespace DeathmatchClient
                 { API.GetHashKey(WEAPON_NAME_LIST[3]), 5 }, // Sniper: 5 $BULLET = $0.05
                 { API.GetHashKey(WEAPON_NAME_LIST[4]), 7 },     // Grenade: 7 $BULLET = $0.07
                 { API.GetHashKey(WEAPON_NAME_LIST[5]), 10 },         // Rocket Launcher: 10 $BULLET = $0.10
-                { API.GetHashKey(WEAPON_NAME_LIST[6]), 20 } // Homing Launcher: 20 $BULLET = $0.20
+                { API.GetHashKey(WEAPON_NAME_LIST[6]), 20 }, // Homing Launcher: 20 $BULLET = $0.20
+                { API.GetHashKey(WEAPON_NAME_LIST[7]), 0 } // Homing Launcher: 20 $BULLET = $0.00
             };
             WEAPONHASH_TO_NAME = new Dictionary<int, string>
             {
@@ -56,7 +59,8 @@ namespace DeathmatchClient
                 { unchecked(API.GetHashKey(WEAPON_NAME_LIST[3])), WEAPON_NAME_LIST[3] }, // Sniper
                 { unchecked(API.GetHashKey(WEAPON_NAME_LIST[4])), WEAPON_NAME_LIST[4] },     // Grenade
                 { unchecked(API.GetHashKey(WEAPON_NAME_LIST[5])), WEAPON_NAME_LIST[5] },          // Rocket Launcher
-                { unchecked(API.GetHashKey(WEAPON_NAME_LIST[6])), WEAPON_NAME_LIST[6] }          // Homing Launcher
+                { unchecked(API.GetHashKey(WEAPON_NAME_LIST[6])), WEAPON_NAME_LIST[6] },          // Homing Launcher
+                { unchecked(API.GetHashKey(WEAPON_NAME_LIST[7])), WEAPON_NAME_LIST[7] }          // Homing Launcher
             };
 
             // NOTE: these registers depend on globals above
@@ -75,7 +79,6 @@ namespace DeathmatchClient
             EventHandlers["removeBulletTokenPickup"] += new Action<String, int>(OnRemoveBulletTokenPickup);
             
             EventHandlers["playerSpawned"] += new Action(OnPlayerSpawned);
-            
         }
         private void RegisterTickHandlers() {
             Tick += UpdateHud;
@@ -126,17 +129,7 @@ namespace DeathmatchClient
             API.RegisterCommand("/giveguns", new Action<int, dynamic>((source, args) =>
             {
                 // Give default weapons with 0 ammo
-                int playerPed = API.PlayerPedId();
-                uint weaponHash = (uint)API.GetHashKey(WEAPON_NAME_LIST[0]);
-                API.GiveWeaponToPed(playerPed, weaponHash, 0, false, true); // Equip pistol
-                API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[1]), 0, false, false);
-                API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[2]), 0, false, false);
-                API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[3]), 0, false, false);
-                API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[4]), 0, false, false);
-                API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[5]), 0, false, false);
-                API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[6]), 0, false, false);
-
-                hlog($"Gave default guns with 0 ammo.", false, true); // debug, screen
+                giveDefaultWeapons();                
             }), false);
 
             // New givehandgun command
@@ -214,7 +207,8 @@ namespace DeathmatchClient
                 }
 
                 // execute coord jump
-                OnJumpCommand(coords, coordRange);
+                Vector3 coordsV = new Vector3(coords[0], coords[1], coords[2]);
+                OnJumpCommand(coordsV, coordRange);
             }), false);
 
             // manually sync pickups from server side
@@ -223,22 +217,38 @@ namespace DeathmatchClient
                 TriggerServerEvent("requestPickupSync"); // Ask server for active pickups
                 hlog("YOU manually requested pickup sync", true, true); // debug, screen
             }), false);
+
+            // manually sync pickups from server side
+            API.RegisterCommand("/stopresource", new Action<int, dynamic>((source, args) =>
+            {
+                if (args.Count > 0)
+                {
+                    string resourceName = args[0].ToString();
+                    TriggerServerEvent("stopResource", resourceName); // Ask server to stop resource
+                    hlog($"YOU manually requested resource stop: {resourceName}", true, true); // debug, screen
+                }
+                else
+                {
+                    hlog("YOU manually requested resource stop: no args", true, false); // debug, screen
+                }
+            }), false);
         }
 
         /* -------------------------------------------------------- */
         /* PRIVATE - event hanlders                            
         /* -------------------------------------------------------- */
         private void OnPlayerSpawned()
-        {
+        {   
             hlog("YOU respawned", true, true); // debug, screen
             requestPickupSync();
+            giveDefaultWeapons();
         }
-        private void OnJumpCommand(List<float> coords, float range=0)
+        private void OnJumpCommand(Vector3 coords, float range=0)
         {
             // Teleport player to new coordinates
-            float X = coords[0]+range;
-            float Y = coords[1]+range;
-            float Z = coords[2]+range;
+            float X = coords.X+range;
+            float Y = coords.Y+range;
+            float Z = coords.Z+range;
             API.SetEntityCoords(API.PlayerPedId(), X, Y, Z, false, false, false, false);
             hlog($"YOU jumped to coords: {X}, {Y}, {Z}", true, true); // debug, screen
 
@@ -288,7 +298,8 @@ namespace DeathmatchClient
             int blip = BULLET_PICKUPS[pickupId].Item4;
             API.RemoveBlip(ref blip);
 
-            BULLET_PICKUPS.Remove(pickupId);
+            // BULLET_PICKUPS.Remove(pickupId); // note: may becausing exception
+            BULLET_PICKUPS[pickupId] = Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, BULLET_PICKUPS[pickupId].Item3, BULLET_PICKUPS[pickupId].Item4, true);
             hlog($"Player {playerName} Removed $BULLET token pickup _ pickupId: {pickupId}", true, true); // debug, screen
         }
 
@@ -479,6 +490,21 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* PRIVATE - algorthimic support                            
         /* -------------------------------------------------------- */
+        private void giveDefaultWeapons() {
+            // Give default weapons with 0 ammo
+            int playerPed = API.PlayerPedId();
+            uint weaponHash = (uint)API.GetHashKey(WEAPON_NAME_LIST[0]);
+            API.GiveWeaponToPed(playerPed, weaponHash, 0, false, true); // Equip pistol
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[1]), 0, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[2]), 0, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[3]), 0, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[4]), 0, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[5]), 0, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[6]), 0, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[7]), 1, false, false);
+
+            hlog($"Gave default guns with 0 ammo.", false, true); // debug, screen
+        }
         private void requestPickupSync()
         {
             // Request active pickups from server
