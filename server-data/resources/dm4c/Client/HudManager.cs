@@ -36,8 +36,8 @@ namespace DeathmatchClient
         private readonly Dictionary<int, Tuple<int, Vector3, int, int, bool>> BULLET_PICKUPS = new Dictionary<int, Tuple<int, Vector3, int, int, bool>>(); // <pickupId <pickupHandle, deathCoords, bulletAmnt, bilp, isPickedUp>>
         private Dictionary<int, bool> FLAG_PICKUPIDS_WRITING = new Dictionary<int, bool>(); // pickupId flag for reads to wait
         private bool TRACK_BULLET_PICKUPS = true; // false = use 'BULLET_PICKUPS.Remove(pickupId)'
-        private readonly float DRAW_DIST_PLAYER_DEATHCOORD = 10000f; // max range for player to see pickup
-        private readonly float CREATE_DIST_PLAYER_DEATHCOORD = 500f; // max range for player to create pickup
+        private readonly float DIST_DRAW_PLAYER_DEATHCOORD = 10000f; // max range to draw pickup text for player to see
+        private readonly float DIST_CREATE_PLAYER_DEATHCOORD = 500f; // max range to create pickup for player to see & grab
 
         /* -------------------------------------------------------- */
         /* CONSTRUCTOR
@@ -397,7 +397,7 @@ namespace DeathmatchClient
                 //      ie. Tick CheckForPickup trigger -> server side playerPickedUpAmmo
                 //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
                 //          client side removeBulletTokenPickup -> invokes BULLET_PICKUPS.Remove(pickupId);
-                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < DRAW_DIST_PLAYER_DEATHCOORD)
+                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < DIST_DRAW_PLAYER_DEATHCOORD)
                 {
                     // Draw marker above pickup (fails if player not in range)
                     //  NOTE: fivem docs says needs to be called every tick/frame
@@ -429,7 +429,7 @@ namespace DeathmatchClient
                 //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
                 //          client side removeBulletTokenPickup -> invokes BULLET_PICKUPS.Remove(pickupId);
                 // note: 500f is way too far for game core to display (i think)
-                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < CREATE_DIST_PLAYER_DEATHCOORD)
+                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < DIST_CREATE_PLAYER_DEATHCOORD)
                 {
                     // generate pickup
                     uint pickupHash = (uint)API.GetHashKey("PICKUP_MONEY_VARIABLE");
