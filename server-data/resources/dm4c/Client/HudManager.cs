@@ -4,6 +4,7 @@ using CitizenFX.Core.Native;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using static CitizenFX.Core.Native.API;
 // using System.Diagnostics;
 // using Mono.CSharp;
 
@@ -14,6 +15,7 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* GLOBALS - settings
         /* -------------------------------------------------------- */
+        private bool SHOW_CMD_HUD = false;
         private int F4_KEY_RESERVE_AMNT = 200; // default reserve ammo amount
         private int LIVE_AMMO = 0;
         private int RESERVE_AMMO = 0;
@@ -106,41 +108,29 @@ namespace DeathmatchClient
             Tick += CreatePickups;
             Tick += DrawPickups;
             Tick += OnKeyPress;
+            Tick += OnKeyPressF1;
+            Tick += InfiniteSprint;
         }
         private void RegisterCommands() {
+
+            // get curreny coords
+            API.RegisterCommand("/givetest", new Action<int, dynamic>((source, args) =>
+            {
+                // Give default weapons with 0 ammo
+                giveDefaultWeapons();
+                TriggerServerEvent("purchaseAmmo", 500); // Reuse existing event
+                int ammo = 50;
+                LIVE_AMMO += ammo;
+                TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
+                hlog($"YOU got weapons test setup", true, true); // debug, screen
+
+            }), false);
             // Register test command
             API.RegisterCommand("/togglehud", new Action<int, dynamic>((source, args) =>
             {
                 HUD_VISIBLE = !HUD_VISIBLE; // Toggle state
                 API.SendNuiMessage($@"{{""type"": ""showHud"", ""visible"": {HUD_VISIBLE.ToString().ToLower()}}}");
                 hlog($"HUD {(HUD_VISIBLE ? "enabled" : "disabled")}", false, true); // debug, screen
-            }), false);
-
-            // New givehandgun command
-            API.RegisterCommand("/givehandgun", new Action<int, dynamic>((source, args) =>
-            {
-                int ammo = 50; // Default ammo
-                if (args.Count > 0)
-                {
-                    if (int.TryParse(args[0].ToString(), out int parsedAmmo))
-                    {
-                        ammo = parsedAmmo;
-                    }
-                    else
-                    {
-                        hlog("Invalid ammo amount. Using default (50).", false, true); // debug, screen
-                    }
-                }
-
-                // Give pistol and loaded ammo
-                uint weaponHash = (uint)API.GetHashKey("WEAPON_PISTOL");
-                int playerPed = API.PlayerPedId();
-                API.GiveWeaponToPed(playerPed, weaponHash, 0, false, true); // Equip pistol
-                API.AddAmmoToPed(playerPed, weaponHash, ammo); // Add loaded ammo
-                hlog($"Gave pistol with {ammo} loaded ammo.", false, true); // debug, screen
-
-                // Trigger server event to update reserve ammo
-                TriggerServerEvent("purchaseAmmo", ammo); // Reuse existing event
             }), false);
 
             // New giveguns command
@@ -285,6 +275,15 @@ namespace DeathmatchClient
             {
                 QuitServer(); // Trigger server event to disconnect
             }), false);
+
+            // get curreny coords
+            API.RegisterCommand("/coords", new Action<int, dynamic>((source, args) =>
+            {
+                Vector3 coords = API.GetEntityCoords(API.PlayerPedId(), false);
+                hlog($"YOU are at coords: {coords}", true, true); // debug, screen
+            }), false);
+
+
             
         }
 
@@ -378,6 +377,12 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* PRIVATE - frame/task loop support                            
         /* -------------------------------------------------------- */
+        private async Task InfiniteSprint()
+        {
+            // Set stamina to 100%
+            API.SetPlayerStamina(Game.Player.Handle, 100.0f);
+            await Delay(100); // Run every 100ms
+        }
         private async Task DrawPickups() {
             // Draw markers for all active pickups
             foreach (var kvp in BULLET_PICKUPS)
@@ -573,6 +578,7 @@ namespace DeathmatchClient
             // Keybind logic
             if (API.IsControlJustPressed(0, 288)) { // F1
                 hlog("F1 -> TODO: show HUD for all 'F' key presses", true, true); // debug, screen
+                SHOW_CMD_HUD = !SHOW_CMD_HUD;
             }
             else if (API.IsControlJustPressed(0, 289)) { // F2 -> show HUD weapon ammo to $BULLET pricing
                 hlog("F2 -> TODO: show HUD weapon ammo to $BULLET pricing", true, true); // debug, screen
@@ -600,6 +606,32 @@ namespace DeathmatchClient
             }
             
             await Delay(10);
+        }
+        public async Task OnKeyPressF1()
+        {
+            if (SHOW_CMD_HUD) {
+                // Draw a semi-transparent white square in the center of the screen
+                DrawRect(0.5f, 0.5f, 0.5f, 0.5f, 255, 255, 255, 150);
+
+                // Define text lines to display
+                string[] textLines = new[]
+                {
+                    "Welcome to the Server!",
+                    "Line 2: Venice Beach",
+                    "Line 3: Press F1 to Quit",
+                    "Line 4: Enjoy the Game!"
+                };
+
+                // Draw each line of text inside the square
+                float startY = 0.35f; // Starting Y position (top of the square)
+                float lineSpacing = 0.05f; // Spacing between lines
+                for (int i = 0; i < textLines.Length; i++)
+                {
+                    DrawText2D(textLines[i], 0.5f, startY + (i * lineSpacing), 0.5f, 255, 255, 255, 255, true);
+                }
+            }
+
+            await Task.FromResult(0);
         }
 
         /* -------------------------------------------------------- */
@@ -699,6 +731,18 @@ namespace DeathmatchClient
                 API.AddTextComponentSubstringPlayerName(text);
                 API.EndTextCommandDisplayText(screenX, screenY);
             }
+        }
+        // Helper function to draw 2D text
+        private void DrawText2D(string text, float x, float y, float scale, int r, int g, int b, int a, bool center)
+        {
+            API.SetTextFont(0); // Default font
+            API.SetTextScale(scale, scale);
+            API.SetTextColour(r, g, b, a);
+            API.SetTextCentre(center);
+            API.SetTextOutline(); // Add outline for readability
+            API.BeginTextCommandDisplayText("STRING");
+            API.AddTextComponentString(text);
+            API.EndTextCommandDisplayText(x, y);
         }
     }
 }
