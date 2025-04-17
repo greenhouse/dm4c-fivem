@@ -116,13 +116,7 @@ namespace DeathmatchClient
             // get curreny coords
             API.RegisterCommand("/givetest", new Action<int, dynamic>((source, args) =>
             {
-                // Give default weapons with 0 ammo
-                giveDefaultWeapons();
-                TriggerServerEvent("purchaseAmmo", 500); // Reuse existing event
-                int ammo = 50;
-                LIVE_AMMO += ammo;
-                TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
-                hlog($"YOU got weapons test setup", true, true); // debug, screen
+                GiveTestSetup();
 
             }), false);
             // Register test command
@@ -282,9 +276,6 @@ namespace DeathmatchClient
                 Vector3 coords = API.GetEntityCoords(API.PlayerPedId(), false);
                 hlog($"YOU are at coords: {coords}", true, true); // debug, screen
             }), false);
-
-
-            
         }
 
         /* -------------------------------------------------------- */
@@ -295,6 +286,7 @@ namespace DeathmatchClient
             hlog("YOU respawned", true, true); // debug, screen
             requestPickupSync();
             giveDefaultWeapons();
+            GiveTestSetup(); // ** WARNING ** - testing only (comment out for production)
         }
         private void OnJumpCommand(Vector3 coords, float range=0)
         {
@@ -637,6 +629,15 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* PRIVATE - algorthimic support                            
         /* -------------------------------------------------------- */
+        private void GiveTestSetup(){
+            // Give default weapons with 0 ammo
+            giveDefaultWeapons();
+            TriggerServerEvent("purchaseAmmo", 500); // Reuse existing event
+            int ammo = 50;
+            LIVE_AMMO += ammo;
+            TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
+            hlog($"YOU got weapons test setup", true, true); // debug, screen
+        }
         private void QuitServer() {
             // Notify the player
             hlog("YOU are Disconnecting from the server...", true, true); // debug, screen
