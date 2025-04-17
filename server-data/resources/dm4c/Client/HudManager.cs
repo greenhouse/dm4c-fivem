@@ -66,7 +66,7 @@ namespace DeathmatchClient
                 { API.GetHashKey(WEAPON_NAME_LIST[4]), 7 },     // Grenade: 7 $BULLET = $0.07
                 { API.GetHashKey(WEAPON_NAME_LIST[5]), 10 },         // Rocket Launcher: 10 $BULLET = $0.10
                 { API.GetHashKey(WEAPON_NAME_LIST[6]), 20 }, // Homing Launcher: 20 $BULLET = $0.20
-                { API.GetHashKey(WEAPON_NAME_LIST[7]), 0 } // Homing Launcher: 20 $BULLET = $0.00
+                { API.GetHashKey(WEAPON_NAME_LIST[7]), 0 } // parachute: 20 $BULLET = $0.00
             };
             WEAPONHASH_TO_NAME = new Dictionary<int, string>
             {
@@ -77,7 +77,7 @@ namespace DeathmatchClient
                 { unchecked(API.GetHashKey(WEAPON_NAME_LIST[4])), WEAPON_NAME_LIST[4] },     // Grenade
                 { unchecked(API.GetHashKey(WEAPON_NAME_LIST[5])), WEAPON_NAME_LIST[5] },          // Rocket Launcher
                 { unchecked(API.GetHashKey(WEAPON_NAME_LIST[6])), WEAPON_NAME_LIST[6] },          // Homing Launcher
-                { unchecked(API.GetHashKey(WEAPON_NAME_LIST[7])), WEAPON_NAME_LIST[7] }          // Homing Launcher
+                { unchecked(API.GetHashKey(WEAPON_NAME_LIST[7])), WEAPON_NAME_LIST[7] }          // parachute
             };
 
             // NOTE: these registers depend on globals above
