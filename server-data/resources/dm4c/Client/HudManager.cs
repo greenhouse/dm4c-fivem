@@ -344,39 +344,6 @@ namespace DeathmatchClient
         /* -------------------------------------------------------- */
         /* PRIVATE - frame/task loop support                            
         /* -------------------------------------------------------- */
-        private async Task OnKeyPress()
-        {
-            // Keybind logic
-            if (API.IsControlJustPressed(0, 288)) { // F1
-                hlog("F1 -> TODO: show HUD for all 'F' key presses", true, true); // debug, screen
-            }
-            else if (API.IsControlJustPressed(0, 289)) { // F2 -> show HUD weapon ammo to $BULLET pricing
-                hlog("F2 -> TODO: show HUD weapon ammo to $BULLET pricing", true, true); // debug, screen
-            }
-            else if (API.IsControlJustPressed(0, 290)) { // F3 -> get all weapons
-                giveDefaultWeapons();
-                hlog("F3: got weapons", true, true); // debug, screen
-            }
-            else if (API.IsControlJustPressed(0, 291)) { // F4 -> get some reserve $BULLET tokens
-                TriggerServerEvent("purchaseAmmo", F4_KEY_RESERVE_AMNT); // Reuse existing event
-                hlog($"F4: got {F4_KEY_RESERVE_AMNT} reserve $BULLET tokens", true, true); // debug, screen
-            }
-            else if (API.IsControlJustPressed(0, 292)) { // F5 -> load ammo from reserve
-                int ammo = RESERVE_AMMO > 0 ? RESERVE_AMMO / 2 : 0; // default reserve ammo amount
-                if (ammo == 0) hlog("not enouch reserve $BULLET to load, use F4 or /givereserve <amnt>", true, true); // debug, screen
-
-                // increment live ammo & Trigger server event to update reserve ammo
-                LIVE_AMMO += ammo;
-                TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
-                hlog("F5: loaded half your reserve $BULLET into ammo", true, true); // debug, screen
-            }
-            else if (API.IsControlJustPressed(0, 293)) { // F6 -> quit/leave server
-                QuitServer();
-                hlog("F6: quit server", true, true); // debug, screen
-            }
-            
-            await Delay(10);
-        }
         private async Task DrawPickups() {
             // Draw markers for all active pickups
             foreach (var kvp in BULLET_PICKUPS)
@@ -388,7 +355,7 @@ namespace DeathmatchClient
                 bool isPickedUp = BULLET_PICKUPS[pickupId].Item5;
                 Vector3 playerPos = Game.PlayerPed.Position;
 
-                // Check if player is near pickup & $BULLET is not picked up yet
+                // Check if player is near pickup & $BULLET is not yet picked up
                 //  NOTE: isPickedUp (.Item5) not needed anymore w/ removeBulletTokenPickup integration
                 //      ie. Tick CheckForPickup trigger -> server side playerPickedUpAmmo
                 //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
@@ -416,7 +383,7 @@ namespace DeathmatchClient
                 bool isPickedUp = BULLET_PICKUPS[pickupId].Item5;
                 Vector3 playerPos = Game.PlayerPed.Position;
 
-                // Check if player is near pickup & $BULLET is not picked up yet
+                // Check if player is near pickup & $BULLET is not yet picked up
                 //  NOTE: isPickedUp (.Item5) not needed anymore w/ removeBulletTokenPickup integration
                 //      ie. Tick CheckForPickup trigger -> server side playerPickedUpAmmo
                 //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
@@ -556,6 +523,39 @@ namespace DeathmatchClient
                 UpdateNui(LIVE_AMMO); 
             }
             await Task.FromResult(0);
+        }
+        private async Task OnKeyPress()
+        {
+            // Keybind logic
+            if (API.IsControlJustPressed(0, 288)) { // F1
+                hlog("F1 -> TODO: show HUD for all 'F' key presses", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 289)) { // F2 -> show HUD weapon ammo to $BULLET pricing
+                hlog("F2 -> TODO: show HUD weapon ammo to $BULLET pricing", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 290)) { // F3 -> get all weapons
+                giveDefaultWeapons();
+                hlog("F3: got weapons", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 291)) { // F4 -> get some reserve $BULLET tokens
+                TriggerServerEvent("purchaseAmmo", F4_KEY_RESERVE_AMNT); // Reuse existing event
+                hlog($"F4: got {F4_KEY_RESERVE_AMNT} reserve $BULLET tokens", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 292)) { // F5 -> load ammo from reserve
+                int ammo = RESERVE_AMMO > 0 ? RESERVE_AMMO / 2 : 0; // default reserve ammo amount
+                if (ammo == 0) hlog("not enouch reserve $BULLET to load, use F4 or /givereserve <amnt>", true, true); // debug, screen
+
+                // increment live ammo & Trigger server event to update reserve ammo
+                LIVE_AMMO += ammo;
+                TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
+                hlog("F5: loaded half your reserve $BULLET into ammo", true, true); // debug, screen
+            }
+            else if (API.IsControlJustPressed(0, 293)) { // F6 -> quit/leave server
+                QuitServer();
+                hlog("F6: quit server", true, true); // debug, screen
+            }
+            
+            await Delay(10);
         }
 
         /* -------------------------------------------------------- */
