@@ -11,21 +11,37 @@ namespace DeathmatchClient
 {
     public class HudManager : BaseScript
     {
+        /* -------------------------------------------------------- */
+        /* GLOBALS - settings
+        /* -------------------------------------------------------- */
         private int F4_KEY_RESERVE_AMNT = 200; // default reserve ammo amount
         private int LIVE_AMMO = 0;
         private int RESERVE_AMMO = 0;
         private int LAST_WEAPON_AMMO_CNT = 0;
         private int LAST_WEAPONHASH_SELECT = 0; // Track last equipped weapon
         private bool LAST_DEAD_CHECKED = false; // Debounce death triggers
-        private bool hudVisible = true; // Track HUD state
+        private bool HUD_VISIBLE = true; // Track HUD state
 
-        // weapon type to bullet token value
+        /* -------------------------------------------------------- */
+        /* GLOBALS - weapons
+        /* -------------------------------------------------------- */
         private readonly int WEAPONHASH_NONE = -1569615261;
         private readonly string[] WEAPON_NAME_LIST;
         private readonly Dictionary<int, int> WEAPONHASH_BULLET_VALUE;
         private readonly Dictionary<int, string> WEAPONHASH_TO_NAME;
-        private readonly Dictionary<int, Tuple<int, Vector3, int, int, bool>> BULLET_PICKUPS = new Dictionary<int, Tuple<int, Vector3, int, int, bool>>(); // <pickupId <pickupHandle, deathCoords, bulletAmnt, bilp, isPickedUp>>
 
+        /* -------------------------------------------------------- */
+        /* GLOBALS - bullet pickup tracking
+        /* -------------------------------------------------------- */
+        private readonly Dictionary<int, Tuple<int, Vector3, int, int, bool>> BULLET_PICKUPS = new Dictionary<int, Tuple<int, Vector3, int, int, bool>>(); // <pickupId <pickupHandle, deathCoords, bulletAmnt, bilp, isPickedUp>>
+        private Dictionary<int, bool> FLAG_PICKUPIDS_WRITING = new Dictionary<int, bool>(); // pickupId flag for reads to wait
+        private bool TRACK_BULLET_PICKUPS = true; // false = use 'BULLET_PICKUPS.Remove(pickupId)'
+        private readonly float DRAW_DIST_PLAYER_DEATHCOORD = 10000f; // max range for player to see pickup
+        private readonly float CREATE_DIST_PLAYER_DEATHCOORD = 500f; // max range for player to create pickup
+
+        /* -------------------------------------------------------- */
+        /* CONSTRUCTOR
+        /* -------------------------------------------------------- */
         public HudManager()
         {
             // init globals
@@ -95,9 +111,9 @@ namespace DeathmatchClient
             // Register test command
             API.RegisterCommand("/togglehud", new Action<int, dynamic>((source, args) =>
             {
-                hudVisible = !hudVisible; // Toggle state
-                API.SendNuiMessage($@"{{""type"": ""showHud"", ""visible"": {hudVisible.ToString().ToLower()}}}");
-                hlog($"HUD {(hudVisible ? "enabled" : "disabled")}", false, true); // debug, screen
+                HUD_VISIBLE = !HUD_VISIBLE; // Toggle state
+                API.SendNuiMessage($@"{{""type"": ""showHud"", ""visible"": {HUD_VISIBLE.ToString().ToLower()}}}");
+                hlog($"HUD {(HUD_VISIBLE ? "enabled" : "disabled")}", false, true); // debug, screen
             }), false);
 
             // New givehandgun command
@@ -311,6 +327,7 @@ namespace DeathmatchClient
             hlog($"Updating HUD with LIVE_AMMO: {LIVE_AMMO} | RESERVE_AMMO: {RESERVE_AMMO}", true, false); // debug, screen
             UpdateNui(LIVE_AMMO);
         }
+                
         private void OnSpawnBulletTokenPickup(String playerName, int pickupId, int bulletAmnt, Vector3 deathCoords)
         {
             // Add blip to minimap (regardless of player range)
@@ -328,16 +345,33 @@ namespace DeathmatchClient
             // generate pickup and store in BULLET_PICKUPS
             uint pickupHash = (uint)API.GetHashKey("PICKUP_MONEY_VARIABLE");
             int newPickup = API.CreatePickup(pickupHash, deathCoords.X, deathCoords.Y, deathCoords.Z, 0, bulletAmnt, false, 0);
-            BULLET_PICKUPS[pickupId] = new Tuple<int, Vector3, int, int, bool>(newPickup, deathCoords, bulletAmnt, blip, false);
+            // BULLET_PICKUPS[pickupId] = new Tuple<int, Vector3, int, int, bool>(newPickup, deathCoords, bulletAmnt, blip, false);
+            WriteToBulletPickups(pickupId, new Tuple<int, Vector3, int, int, bool>(newPickup, deathCoords, bulletAmnt, blip, false));
             hlog($"Player {playerName} Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})", true, false); // debug, screen
         }
-        private void OnRemoveBulletTokenPickup(String playerName, int pickupId)
+        public void WriteToBulletPickups(int pickupId, Tuple<int, Vector3, int, int, bool> bulletPickup) {
+            // set global writing flag (so other threads wait to read)
+            FLAG_PICKUPIDS_WRITING[pickupId] = true;
+
+            // if isPickedUp && global not tracking, then delete BULLET_PICKUPS
+            //  else, just update BULLET_PICKUPS
+            if (bulletPickup.Item5 && !TRACK_BULLET_PICKUPS) BULLET_PICKUPS.Remove(pickupId);
+            else BULLET_PICKUPS[pickupId] = bulletPickup;
+
+            // unset global writing flag (so other threads can read)
+            FLAG_PICKUPIDS_WRITING[pickupId] = false;
+        }
+        private async void OnRemoveBulletTokenPickup(String playerName, int pickupId)
         {
+            // wait for writing to finish
+            while (FLAG_PICKUPIDS_WRITING[pickupId]) await Delay(100);
+               
             int blip = BULLET_PICKUPS[pickupId].Item4;
             API.RemoveBlip(ref blip);
 
             // BULLET_PICKUPS.Remove(pickupId); // note: may becausing exception
-            BULLET_PICKUPS[pickupId] = Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, BULLET_PICKUPS[pickupId].Item3, BULLET_PICKUPS[pickupId].Item4, true);
+            // BULLET_PICKUPS[pickupId] = Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, BULLET_PICKUPS[pickupId].Item3, BULLET_PICKUPS[pickupId].Item4, true);
+            WriteToBulletPickups(pickupId, Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, BULLET_PICKUPS[pickupId].Item3, BULLET_PICKUPS[pickupId].Item4, true));
             hlog($"Player {playerName} Removed $BULLET token pickup _ pickupId: {pickupId}", true, true); // debug, screen
         }
 
@@ -348,7 +382,10 @@ namespace DeathmatchClient
             // Draw markers for all active pickups
             foreach (var kvp in BULLET_PICKUPS)
             {
+                // skip this task if writing
                 int pickupId = kvp.Key;
+                if (FLAG_PICKUPIDS_WRITING[pickupId]) continue;
+
                 // int pickupHandle = BULLET_PICKUPS[pickupId].Item1;
                 Vector3 deathCoords = BULLET_PICKUPS[pickupId].Item2;
                 int bulletAmnt = BULLET_PICKUPS[pickupId].Item3;
@@ -360,13 +397,13 @@ namespace DeathmatchClient
                 //      ie. Tick CheckForPickup trigger -> server side playerPickedUpAmmo
                 //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
                 //          client side removeBulletTokenPickup -> invokes BULLET_PICKUPS.Remove(pickupId);
-                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < 10000f)
+                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < DRAW_DIST_PLAYER_DEATHCOORD)
                 {
                     // Draw marker above pickup (fails if player not in range)
                     //  NOTE: fivem docs says needs to be called every tick/frame
                     DrawBulletTokenPickupMarker(playerPos, deathCoords, bulletAmnt);
 
-                    // grok say delay 500 to avoid overloading w/ draw calls
+                    // grok say Delay 500 to avoid overloading w/ draw calls
                     // await Delay(500); // wait 500ms (0.5 sec)
                 }
             }
@@ -376,7 +413,10 @@ namespace DeathmatchClient
             // Draw markers for all active pickups
             foreach (var kvp in BULLET_PICKUPS)
             {
+                // skip this task if writing
                 int pickupId = kvp.Key;
+                if (FLAG_PICKUPIDS_WRITING[pickupId]) continue;
+
                 // int pickupHandle = BULLET_PICKUPS[pickupId].Item1;
                 Vector3 deathCoords = BULLET_PICKUPS[pickupId].Item2;
                 int bulletAmnt = BULLET_PICKUPS[pickupId].Item3;
@@ -389,14 +429,14 @@ namespace DeathmatchClient
                 //          server side playerPickedUpAmmo trigger -> ALL client side removeBulletTokenPickup
                 //          client side removeBulletTokenPickup -> invokes BULLET_PICKUPS.Remove(pickupId);
                 // note: 500f is way too far for game core to display (i think)
-                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < 500f)
+                if (!isPickedUp && Vector3.Distance(playerPos, deathCoords) < CREATE_DIST_PLAYER_DEATHCOORD)
                 {
                     // generate pickup
                     uint pickupHash = (uint)API.GetHashKey("PICKUP_MONEY_VARIABLE");
                     int newPickup = API.CreatePickup(pickupHash, deathCoords.X, deathCoords.Y, deathCoords.Z, 0, bulletAmnt, false, 0);
 
                     // avoid overloading w/ create calls
-                    await Delay(1000); // wait 1000ms (1 sec)
+                    await Delay(100); // wait 100ms (0.1 sec)
                 }
             }
             await Task.FromResult(0);
@@ -408,7 +448,7 @@ namespace DeathmatchClient
             //  server side "requestPickupSync" triggers -> client side "spawnBulletTokenPickup"
             //  client side "spawnBulletTokenPickup" -> invokes API.CreatePickup(<coords>)
             //  HOWEVER, game core doesn't generate pickups until player is within (some) range
-            //   HENCE, requesting sync w/ (some) delay to compensate for player travel time
+            //   HENCE, requesting sync w/ (some) Delay to compensate for player travel time
             //
             // UPDTE: the above might not be needed, if CreatePickups works correcly (ie. Tick checking distance)
             //  HENCE, this Tick SyncPickups is only needed to gradually keep sync (precautionary, 60 sec maybe?)
@@ -419,8 +459,12 @@ namespace DeathmatchClient
         }
         private async Task CheckForPickup()
         {
-            foreach(var kvp in BULLET_PICKUPS) {
+            foreach(var kvp in BULLET_PICKUPS) 
+            {
+                // skip this task if writing
                 int pickupId = kvp.Key;
+                if (FLAG_PICKUPIDS_WRITING[pickupId]) continue;
+
                 int pickupHandle = BULLET_PICKUPS[pickupId].Item1;
                 bool isPickedUp = BULLET_PICKUPS[pickupId].Item5;
                 if (API.HasPickupBeenCollected(pickupHandle) && !isPickedUp)
