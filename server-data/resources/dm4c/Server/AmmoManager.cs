@@ -1,4 +1,5 @@
 using CitizenFX.Core;
+using CitizenFX.Core.Native;
 using System;
 using System.Collections.Generic;
 // using System.Threading.Tasks;
@@ -6,14 +7,31 @@ using System.Collections.Generic;
 
 namespace DeathmatchServer
 {
+    // PICKUPS[pickupId] = new Tuple<int, int, Vector3, int, bool>(bulletAmnt, playerHandleDrop, deathCoords, -1, false);
+    // public class BulletPickupInfo
+    // {
+    //     public int pickupId { get; set; }
+    //     public int pickupHandle { get; set; }
+    //     public int bulletAmnt { get; set; }
+    //     public int playerHandleDrop { get; set; }
+    //     public Vector3 deathCoords { get; set; }
+    //     public int playerHandlePickup { get; set; }
+    //     public bool isCollected { get; set; }
+    // }
     public class AmmoManager : BaseScript
     {
+        private readonly float DIST_CREATE_PICKUP_MAX = 175f; // max range to create pickup for player to see & grab
+        private readonly float DIST_CREATE_PICKUP_MIN = 150f; // min range to create pickup for player to see & grab (prevent overloading creates)
+            // grok: game core uses a streaming distance to despawn entities like pickups
+            //  typically around 150.0f to 200.0f units (meters) from the player
+        private readonly uint PICKUPHASH_MONEY = (uint)API.GetHashKey("PICKUP_MONEY_VARIABLE");
         // Player handle -> reserve ammo
         private Dictionary<int, int> PLAYER_RESERVES = new Dictionary<int, int>(); 
-        //  <pickupId, <bulletAmnt, playerPedDrop, playerPedPickup, isPickedUp>>
         private Dictionary<int, Tuple<int, int, Vector3, int, bool>> PICKUPS = new Dictionary<int, Tuple<int, int, Vector3, int, bool>>();
+            //  <pickupId, <bulletAmnt, playerPedDrop, deathCoords, playerPedPickup, isPickedUp>>
+        // private readonly List<BulletPickupInfo> PICKUPS = new List<BulletPickupInfo>();
         private int NEXT_PICKUP_ID = 1;
-        public AmmoManager()
+        public AmmoManager() // constructror
         {
             EventHandlers["playerSpawned"] += new Action<Player>(OnPlayerSpawned);
             EventHandlers["purchaseAmmo"] += new Action<Player, int>(OnPurchaseAmmo);
@@ -22,6 +40,8 @@ namespace DeathmatchServer
             EventHandlers["playerPickedUpAmmo"] += new Action<Player, int>(OnPlayerPickedUpAmmo);
             EventHandlers["requestPickupSync"] += new Action<Player>(OnRequestPickupSync);
             EventHandlers["playerQuit"] += new Action<Player>(OnPlayerQuit);
+            
+            Tick += CreatePickups;
         }
 
         private void OnPlayerSpawned([FromSource] Player player)
@@ -33,16 +53,6 @@ namespace DeathmatchServer
             }
             player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandle]);
         }
-
-        // private void OnPurchaseAmmo([FromSource] Player player, int amount)
-        // {
-        //     int playerHandle = int.Parse(player.Handle);
-        //     // note_041225: 'GetValueOrDefault' fails to compile, even w/ 'using System.Linq;'
-        //     //  alt 'OnPurchaseAmmo' integration below
-        //     PLAYER_RESERVES[playerHandle] = PLAYER_RESERVES.GetValueOrDefault(playerHandle, 0) + amount;
-        //     player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandle]);
-        //     Debug.WriteLine($"{player.Name} purchased {amount} ammo. New reserve: {PLAYER_RESERVES[playerHandle]}");
-        // }
         private void OnPurchaseAmmo([FromSource] Player player, int amount)
         {
             int playerHandle = int.Parse(player.Handle);
@@ -64,7 +74,16 @@ namespace DeathmatchServer
             int playerHandleDrop = int.Parse(player.Handle);
             int pickupId = NEXT_PICKUP_ID++;
             PICKUPS[pickupId] = new Tuple<int, int, Vector3, int, bool>(bulletAmnt, playerHandleDrop, deathCoords, -1, false);
-
+            // PICKUPS.Add(new BulletPickupInfo
+            //         {
+            //             pickupId = pickupId,
+            //             pickupHandle = -1,
+            //             bulletAmnt = bulletAmnt,
+            //             playerHandleDrop = playerHandleDrop,
+            //             deathCoords = deathCoords,
+            //             playerHandlePickup = -1,
+            //             isCollected = false
+            //         });
             // Notify ALL clients to spawn the $BULLET token pickup
             TriggerClientEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
             
@@ -75,7 +94,7 @@ namespace DeathmatchServer
             //         p.TriggerEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
             // }
             
-            Debug.WriteLine($"Player {player.Name}({playerHandleDrop}) Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})");
+            Debug.WriteLine($"Player {player.Name}({playerHandleDrop}) Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords}) _ pickupId: {pickupId}");
         }
 
         private void OnPlayerPickedUpAmmo([FromSource] Player player, int pickupId)
@@ -105,7 +124,7 @@ namespace DeathmatchServer
             // Notify ALL clients to remove the $BULLET token pickup
             TriggerClientEvent("removeBulletTokenPickup", player.Name, pickupId);
 
-            Debug.WriteLine($"Player {player.Name}({playerHandlePickup}) Picked-up {bullAmntPickup} $BULLET tokens _ Reserve (Old->New): {oldReserve} -> {newReserve}");
+            Debug.WriteLine($"Player {player.Name}({playerHandlePickup}) Picked-up id: {pickupId}, w/ {bullAmntPickup} $BULLET tokens _ Reserve (Old->New): {oldReserve} -> {newReserve}");
         }
         private void OnRequestPickupSync([FromSource] Player player)
         {
@@ -127,6 +146,90 @@ namespace DeathmatchServer
             int playerHandlePickup = int.Parse(player.Handle);
             player.Drop("You have disconnected using /quit.");
             Debug.WriteLine($"Player {player.Name}({playerHandlePickup}) has disconnected using /quit.");
+        }
+        // private const float CheckInterval = 5.0f; // Check every 5 seconds
+        private async System.Threading.Tasks.Task CreatePickups()
+        {
+            if (PICKUPS.Count == 0) return;
+
+            float currentTime = API.GetGameTimer() / 1000.0f;
+
+            // foreach (PickupInfo pickup in pickups.ToList())
+            
+            foreach (var player in Players)
+            {
+                Vector3 playerPos = player.Character?.Position ?? Vector3.Zero;
+
+                foreach (var kvp in PICKUPS)
+                {
+                    int pickupId = kvp.Key;
+                    int bulletAmnt = PICKUPS[pickupId].Item1;
+                    Vector3 deathCoords = PICKUPS[pickupId].Item3;
+                    bool isPickedUp = PICKUPS[pickupId].Item5;
+                    if (isPickedUp) continue;
+                    // if (pickup.isCollected) continue;
+
+                    // Check if the player is within MaxCreateDistance
+                    float playerDist = Vector3.Distance(playerPos, deathCoords);
+                    // bool IsInRange(float value, float min, float max) => value >= min && value <= max;
+                    // if (IsInRange(playerDist, 100f, DIST_CREATE_PICKUP_MAX))
+                    
+                    if (playerDist > DIST_CREATE_PICKUP_MIN && playerDist <= DIST_CREATE_PICKUP_MAX)
+                    { 
+                        // trigger: OnSpawnBulletTokenPickup(String playerName, int pickupId, int bulletAmnt, Vector3 deathCoords)
+                        player.TriggerEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
+                        Debug.WriteLine($"Sent spawn pickup request to: {player.Name} dist: {playerDist} _ from {deathCoords} _ pickupId: {pickupId} _ has {bulletAmnt} $BULLET tokens");
+
+                        // Request all clients to create the pickup
+                        // TriggerClientEvent("spawnBulletTokenPickup", player.Name, pickupId, PICKUPS[pickupId].Item1, PICKUPS[pickupId].Item3);
+                        await Delay(1000); // Delay to prevent flooding the client
+                    }
+                }
+                // Check if any player is within MaxCreateDistance
+                // bool playerNearby = Players.Any(p =>
+                // {
+                //     Vector3 playerPos = p.Character?.Position ?? Vector3.Zero;
+                //     return Vector3.Distance(playerPos, PICKUPS[pickupId].Item3) <= DIST_CREATE_PICKUP_MAX;
+
+                //     // LEFT OFF HERE ... ^ what next?
+
+                // });
+
+                // if (playerNearby)
+                // {
+                //     // Request all clients to create the pickup
+                //     // TriggerClientEvent("AmmoPickup:Create", pickup.Position.X, pickup.Position.Y, pickup.Position.Z, pickup.AmmoType);
+                //     // TriggerClientEvent("spawnBulletTokenPickup", pickup.Position.X, pickup.Position.Y, pickup.Position.Z, pickup.AmmoType);
+                //     TriggerClientEvent("spawnBulletTokenPickup", "null - player.Name", pickupId, PICKUPS[pickupId].Item1, PICKUPS[pickupId].Item3);
+                    
+                //     Debug.WriteLine($"Requested pickup creation at {pickup.Position} for {pickup.AmmoType}");
+                // }
+
+                // Check if pickup needs creation
+                // if (currentTime - pickup.LastChecked >= CheckInterval)
+                // {
+                //     pickup.LastChecked = currentTime;
+
+                //     // Check if any player is within MaxCreateDistance
+                //     bool playerNearby = Players.Any(p =>
+                //     {
+                //         Vector3 playerPos = p.Character?.Position ?? Vector3.Zero;
+                //         return playerPos != Vector3.Distance(playerPos, pickup.Position) <= MaxCreateDistance;
+                //     });
+
+                //     if (playerNearby)
+                //     {
+                //         // Request all clients to create the pickup
+                //         TriggerClientEvent("AmmoPickup:Create", pickup.Position.X, pickup.Position.Y, pickup.Position.Z, pickup.AmmoType);
+                //         Debug.WriteLine($"Requested pickup creation at {pickup.Position} for {pickup.AmmoType}");
+                //     }
+                // }
+            }
+
+            // Clean up collected pickups
+            // pickups.RemoveAll(p => p.Collected);
+
+            await System.Threading.Tasks.Task.FromResult(1000);
         }
     }
 }
