@@ -632,7 +632,7 @@ namespace DeathmatchClient
                     "when you get killed, you drop your 'live' $BULLET ammo (view HUD in bottom right)",
                     "GOAL: kill others, pickup their dropped $BULLET tokens, swap your $BULLET for USD on blockchain",
                     "------------------------------------",
-                    "Commands ... (press F8)",
+                    "Commands ... (press F8; init: /givetest)",
                     "------------------------------------",
                     "/giveguns: get default weapons (no ammo)",
                     "/givereserve [amnt]: buy $BULLET tokens (HUD bottom right)",
