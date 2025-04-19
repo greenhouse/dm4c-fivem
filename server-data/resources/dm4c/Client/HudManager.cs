@@ -316,7 +316,7 @@ namespace DeathmatchClient
             hlog("YOU respawned", true, true); // debug, screen
             // requestPickupSync();
             giveDefaultWeapons();
-            GiveTestSetup(); // ** WARNING ** - testing only (comment out for production)
+            // GiveTestSetup(); // ** WARNING ** - testing only (comment out for production)
         }
         private void OnJumpCommand(Vector3 coords, float range=0)
         {
