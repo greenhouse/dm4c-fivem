@@ -74,19 +74,11 @@ namespace DeathmatchServer
             int playerHandleDrop = int.Parse(player.Handle);
             int pickupId = NEXT_PICKUP_ID++;
             PICKUPS[pickupId] = new Tuple<int, int, Vector3, int, bool>(bulletAmnt, playerHandleDrop, deathCoords, -1, false);
-            // PICKUPS.Add(new BulletPickupInfo
-            //         {
-            //             pickupId = pickupId,
-            //             pickupHandle = -1,
-            //             bulletAmnt = bulletAmnt,
-            //             playerHandleDrop = playerHandleDrop,
-            //             deathCoords = deathCoords,
-            //             playerHandlePickup = -1,
-            //             isCollected = false
-            //         });
+
             // Notify ALL clients to spawn the $BULLET token pickup
             TriggerClientEvent("spawnBulletTokenPickup", player.Name, pickupId, bulletAmnt, deathCoords);
             
+            // LEFT OFF HERE ... should only spawnBulletTokenPickup for nearby players
             // Notify only NEARBY clients to spawn the $BULLET TOKEN pickup
             // foreach (Player p in Players)
             // {
@@ -152,9 +144,7 @@ namespace DeathmatchServer
         {
             if (PICKUPS.Count == 0) return;
 
-            float currentTime = API.GetGameTimer() / 1000.0f;
-
-            // foreach (PickupInfo pickup in pickups.ToList())
+            // float currentTime = API.GetGameTimer() / 1000.0f;
             
             foreach (var player in Players)
             {
@@ -185,45 +175,6 @@ namespace DeathmatchServer
                         await Delay(1000); // Delay to prevent flooding the client
                     }
                 }
-                // Check if any player is within MaxCreateDistance
-                // bool playerNearby = Players.Any(p =>
-                // {
-                //     Vector3 playerPos = p.Character?.Position ?? Vector3.Zero;
-                //     return Vector3.Distance(playerPos, PICKUPS[pickupId].Item3) <= DIST_CREATE_PICKUP_MAX;
-
-                //     // LEFT OFF HERE ... ^ what next?
-
-                // });
-
-                // if (playerNearby)
-                // {
-                //     // Request all clients to create the pickup
-                //     // TriggerClientEvent("AmmoPickup:Create", pickup.Position.X, pickup.Position.Y, pickup.Position.Z, pickup.AmmoType);
-                //     // TriggerClientEvent("spawnBulletTokenPickup", pickup.Position.X, pickup.Position.Y, pickup.Position.Z, pickup.AmmoType);
-                //     TriggerClientEvent("spawnBulletTokenPickup", "null - player.Name", pickupId, PICKUPS[pickupId].Item1, PICKUPS[pickupId].Item3);
-                    
-                //     Debug.WriteLine($"Requested pickup creation at {pickup.Position} for {pickup.AmmoType}");
-                // }
-
-                // Check if pickup needs creation
-                // if (currentTime - pickup.LastChecked >= CheckInterval)
-                // {
-                //     pickup.LastChecked = currentTime;
-
-                //     // Check if any player is within MaxCreateDistance
-                //     bool playerNearby = Players.Any(p =>
-                //     {
-                //         Vector3 playerPos = p.Character?.Position ?? Vector3.Zero;
-                //         return playerPos != Vector3.Distance(playerPos, pickup.Position) <= MaxCreateDistance;
-                //     });
-
-                //     if (playerNearby)
-                //     {
-                //         // Request all clients to create the pickup
-                //         TriggerClientEvent("AmmoPickup:Create", pickup.Position.X, pickup.Position.Y, pickup.Position.Z, pickup.AmmoType);
-                //         Debug.WriteLine($"Requested pickup creation at {pickup.Position} for {pickup.AmmoType}");
-                //     }
-                // }
             }
 
             // Clean up collected pickups
