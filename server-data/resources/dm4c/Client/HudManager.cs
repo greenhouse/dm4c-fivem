@@ -237,11 +237,11 @@ namespace DeathmatchClient
             }), false);
 
             // manually sync pickups from server side
-            // API.RegisterCommand("/syncpickups", new Action<int, dynamic>((source, args) =>
-            // {
-            //     TriggerServerEvent("requestPickupSync"); // Ask server for active pickups
-            //     hlog("YOU manually requested pickup sync", true, true); // debug, screen
-            // }), false);
+            API.RegisterCommand("/syncpickups", new Action<int, dynamic>((source, args) =>
+            {
+                TriggerServerEvent("requestPickupSync"); // Ask server for active pickups
+                hlog("YOU manually requested pickup sync", true, true); // debug, screen
+            }), false);
 
             // manually sync pickups from server side
             API.RegisterCommand("/stopresource", new Action<int, dynamic>((source, args) =>
@@ -314,7 +314,7 @@ namespace DeathmatchClient
         private void OnPlayerSpawned()
         {   
             hlog("YOU respawned", true, true); // debug, screen
-            // requestPickupSync();
+            requestPickupSync(); // need to get BULLET_PICKUPS from server (for "draw" and blips)
             giveDefaultWeapons();
             // GiveTestSetup(); // ** WARNING ** - testing only (comment out for production)
         }
@@ -326,8 +326,6 @@ namespace DeathmatchClient
             float Z = coords.Z+range;
             API.SetEntityCoords(API.PlayerPedId(), X, Y, Z, false, false, false, false);
             hlog($"YOU jumped to coords: {X}, {Y}, {Z}", true, true); // debug, screen
-
-            // requestPickupSync();
         }
         private void OnClientResourceStart(string resourceName)
         {
@@ -711,13 +709,13 @@ namespace DeathmatchClient
 
             hlog($"Gave default guns with 0 ammo.", false, true); // debug, screen
         }
-        // private void requestPickupSync()
-        // {
-        //     // Request active pickups from server
-        //     // BULLET_PICKUPS.Clear(); // Clear old pickups (just in case, but shouldn't matter)
-        //     TriggerServerEvent("requestPickupSync");
-        //     hlog("YOU requested pickup sync", true, false); // debug, screen
-        // }
+        private void requestPickupSync()
+        {
+            // Request active pickups from server
+            // BULLET_PICKUPS.Clear(); // Clear old pickups (just in case, but shouldn't matter)
+            TriggerServerEvent("requestPickupSync");
+            hlog("YOU requested pickup sync", true, false); // debug, screen
+        }
         private void SetPedAmmoWithBulletValue()
         {
             // SetPedAmmo w/ LIVE_AMMO & WEAPONHASH_BULLET_VALUE calc
