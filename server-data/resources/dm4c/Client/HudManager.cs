@@ -24,6 +24,7 @@ namespace DeathmatchClient
         /* GLOBALS - settings
         /* -------------------------------------------------------- */
         private bool SHOW_CMD_HUD = false;
+        private bool SHOW_PRICE_HUD = false;
         private int F4_KEY_RESERVE_AMNT = 200; // default reserve ammo amount
         private int LIVE_AMMO = 0;
         private int RESERVE_AMMO = 0;
@@ -124,6 +125,7 @@ namespace DeathmatchClient
             Tick += DrawPickups;
             Tick += OnKeyPress;
             Tick += OnKeyPressF1;
+            Tick += OnKeyPressF2;
             Tick += InfiniteSprint;
         }
         private void RegisterCommands() {
@@ -580,12 +582,15 @@ namespace DeathmatchClient
         private async Task OnKeyPress()
         {
             // Keybind logic (note_041725: tried IsControlJustReleased as well, still not working correctly)
-            if (API.IsControlJustPressed(0, 288)) { // F1
-                hlog("F1 -> TODO: show HUD for all 'F' key presses", true, true); // debug, screen
+            if (API.IsControlJustReleased(0, 288)) { // F1
+                hlog("F1: show/hid HUD commands", true, true); // debug, screen
+                SHOW_PRICE_HUD = false;
                 SHOW_CMD_HUD = !SHOW_CMD_HUD;
             }
-            else if (API.IsControlJustPressed(0, 289)) { // F2 -> show HUD weapon ammo to $BULLET pricing
-                hlog("F2 -> TODO: show HUD weapon ammo to $BULLET pricing", true, true); // debug, screen
+            else if (API.IsControlJustReleased(0, 289)) { // F2 -> show HUD weapon ammo to $BULLET pricing
+                hlog("F2: show/hide HUD $BULLET ammo pricing", true, true); // debug, screen
+                SHOW_CMD_HUD = false;
+                SHOW_PRICE_HUD = !SHOW_PRICE_HUD;
             }
             else if (API.IsControlJustPressed(0, 290)) { // F3 -> get all weapons
                 giveDefaultWeapons();
@@ -609,30 +614,66 @@ namespace DeathmatchClient
                 hlog("F6: quit server", true, true); // debug, screen
             }
             
-            await Delay(10);
+            await Delay(0);
         }
         public async Task OnKeyPressF1()
         {
             if (SHOW_CMD_HUD) {
-                // Draw a semi-transparent white square in the center of the screen
-                DrawRect(0.5f, 0.5f, 0.5f, 0.5f, 255, 255, 255, 150);
-
                 // Define text lines to display
                 string[] textLines = new[]
                 {
-                    "Welcome to the Server!",
-                    "Line 2: Venice Beach",
-                    "Line 3: Press F1 to Quit",
-                    "Line 4: Enjoy the Game!"
+                    "Welcome to DM4C (Death Match 4 Cash)!",
+                    "------------------------------------",
+                    "F1: Show/Hide this commands HUD",
+                    "F2: Show/Hide ammo pricing HUD",
+                    "------------------------------------",
+                    "Info ...",
+                    "------------------------------------",
+                    "when you get killed, you drop your 'live' $BULLET ammo (view HUD in bottom right)",
+                    "GOAL: kill others, pickup their dropped $BULLET tokens, swap your $BULLET for USD on blockchain",
+                    "------------------------------------",
+                    "Commands ... (press F8)",
+                    "------------------------------------",
+                    "/giveguns: get default weapons (no ammo)",
+                    "/givereserve [amnt]: buy $BULLET tokens (HUD bottom right)",
+                    "/loadreserve [amnt]: load 'reserve' $BULLET into 'live' ammo (HUD bottom right)",
+                    "/givebike: get motor bike",
+                    "/giveboat: get wave runner",
+                    "/givecar: get police car",
+                    "/quit: exit server",
                 };
 
-                // Draw each line of text inside the square
-                float startY = 0.35f; // Starting Y position (top of the square)
-                float lineSpacing = 0.05f; // Spacing between lines
-                for (int i = 0; i < textLines.Length; i++)
+                DrawInfoHud(textLines);
+            }
+
+            await Task.FromResult(0);
+        }
+        public async Task OnKeyPressF2()
+        {
+            if (SHOW_PRICE_HUD) {
+                // Define text lines to display
+                String descr = $"$BULLET per shot";
+                string[] textLines = new[]
                 {
-                    DrawText2D(textLines[i], 0.5f, startY + (i * lineSpacing), 0.5f, 255, 255, 255, 255, true);
-                }
+                    "Welcome to DM4C (Death Match 4 Cash)!",
+                    "------------------------------------",
+                    "F1: Show/Hide commands HUD",
+                    "F2: Show/Hide this ammo pricing HUD",
+                    "------------------------------------",
+                    "Ammo Pricing ... Note: 1 $BULLET = $0.01 (1 penny)",
+                    " (pay attention to HUD in bottom right) ",
+                    "------------------------------------",
+                    $"{WEAPON_NAME_LIST[0]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[0])]} {descr}",
+                    $"{WEAPON_NAME_LIST[1]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[1])]} {descr}",
+                    $"{WEAPON_NAME_LIST[2]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[2])]} {descr}",
+                    $"{WEAPON_NAME_LIST[3]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[3])]} {descr}",
+                    $"{WEAPON_NAME_LIST[4]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[4])]} {descr}",
+                    $"{WEAPON_NAME_LIST[5]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[5])]} {descr}",
+                    $"{WEAPON_NAME_LIST[6]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[6])]} {descr}",
+                    $"{WEAPON_NAME_LIST[7]} = {WEAPONHASH_BULLET_VALUE[API.GetHashKey(WEAPON_NAME_LIST[7])]} {descr}",
+                };
+
+                DrawInfoHud(textLines);
             }
 
             await Task.FromResult(0);
@@ -802,6 +843,18 @@ namespace DeathmatchClient
             API.BeginTextCommandDisplayText("STRING");
             API.AddTextComponentString(text);
             API.EndTextCommandDisplayText(x, y);
+        }
+        private void DrawInfoHud(string[] textLines) {
+                // Draw a semi-transparent white square in the center of the screen
+                DrawRect(0.5f, 0.5f, 0.6f, 0.95f, 0, 0, 0, 150);
+
+                // Draw each line of text inside the square
+                float startY = 0.03f; // Starting Y position (top of the square)
+                float lineSpacing = 0.05f; // Spacing between lines
+                for (int i = 0; i < textLines.Length; i++)
+                {
+                    DrawText2D(textLines[i], 0.5f, startY + (i * lineSpacing), 0.35f, 255, 255, 255, 255, true);
+                }
         }
     }
 }
