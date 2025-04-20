@@ -103,6 +103,13 @@ namespace DeathmatchClient
             RegisterCommands();
 
             API.SetThisScriptCanRemoveBlipsCreatedByAnyScript(true); // Allow other scripts to remove blips
+
+            // Enable PvP globally
+            API.SetCanAttackFriendly(API.PlayerPedId(), true, false); // Allow players to attack each other
+            // foreach (Player player in Players)
+            // {
+            //     API.EnablePvPForPlayer(player);
+            // }            
         }
 
         /* -------------------------------------------------------- */
