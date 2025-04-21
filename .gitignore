@@ -54,6 +54,9 @@ _expenses/
 #-------------------------------------#
 # ignore c# fivem based
 #-------------------------------------#
+## fivem vanilla server ref: https://github.com/citizenfx/cfx-server-data.git server-data
+server-data-vanilla/
+
 ## local server.cfg testing
 local.cfg
 
