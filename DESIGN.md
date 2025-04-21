@@ -14,6 +14,7 @@
     - plane dash
         - planes randomly spawn around you crashing to the ground
         - try to run from one end of a street to another w/o dying
+        - OR maybe spwan from sky dive and race planes to the ground
 
     - sky dive maze
         - planes and misc object spwan randomly as you fall
@@ -22,6 +23,11 @@
     - frogger with cars going 1000 MPH
         - set all car speeds to 1000 MPH
         - try to cross the street
+
+    - death match 4 cash
+        - every bullet is worth 1 penny
+        - kill people and pickup their dropped ammo (pennies)
+        - cashout with your winnings
 
 ## additional features
     - phone frame work to call your friends

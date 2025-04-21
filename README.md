@@ -4,8 +4,9 @@ dm4c c# fivem client/server integration
 ## test servers
     
 ## NEXT
-    - start c# and lua scripting for DM4C requirements (needs finalized design)
-    - TG: @the_xyt (github: breardon2011)
+    - integrate plainrain
+    DONE - start c# and lua scripting for DM4C requirements (needs finalized design)
+    N/A - TG: @the_xyt (github: breardon2011)
         I think the first step…
         Need a generic HUD using native cfx NUI framework to track reserve ammo vs. live/active ammo
 
