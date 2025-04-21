@@ -1,5 +1,31 @@
 # dm4c-fivem - feature set design models
 
+## misc mod ideas
+    - turret defence (like starcraft UMS)
+        - police constantly spawn from one end of a street
+            constantly running after towards you
+        - spawn count & weapons type increase gradually
+        - need to try to fight them off as long as possible
+
+    - tank vs choppers
+        - choppers constantly spawn on venice beach
+        - you have to use a tank to fight them off
+
+    - plane dash
+        - planes randomly spawn around you crashing to the ground
+        - try to run from one end of a street to another w/o dying
+
+    - sky dive maze
+        - planes and misc object spwan randomly as you fall
+        - try to make it safely to the ground
+
+    - frogger with cars going 1000 MPH
+        - set all car speeds to 1000 MPH
+        - try to cross the street
+
+## additional features
+    - phone frame work to call your friends
+    - 
 ## primary feature set design
     - intial home/starting area (single street with 2 exits)
         - no fighting or firing bullets in this area
