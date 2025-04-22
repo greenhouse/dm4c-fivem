@@ -234,8 +234,7 @@ namespace Planerain.Client
             // if (!isRainingPlanes)
             //     return;
 
-            // if (activePlanes.Count < MAX_PLANES)
-            if (activePlanes.Count < 1000)
+            if (activePlanes.Count < MAX_PLANES)
             {
                 hlog($"YOU are spawning planes: {activePlanes.Count}", true, false); // debug, screen
                 Vector3 playerPos = Game.PlayerPed.Position;
@@ -243,7 +242,7 @@ namespace Planerain.Client
                 // Generate random radius within min and max
                 // float radius = SPAWN_RADIUS_MIN + (float)random.NextDouble() * (SPAWN_RADIUS_MAX - SPAWN_RADIUS_MIN);
 
-                float spawn_min_rad = 50f;
+                float spawn_min_rad = 20f;
                 float spawn_max_rad = 100f;
                 float spawn_height = 100f;
                 float radius = spawn_min_rad + (float)random.NextDouble() * (spawn_max_rad - spawn_min_rad);
