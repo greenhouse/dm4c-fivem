@@ -79,10 +79,10 @@ namespace Planerain.Client
                 GiveTestSetup();
             }), false);
 
-            // respwan by sky dive
+            // respwan by sky dive (on = /skydive | /skydive <enable|true|yes|on|1>, off = /skydive <anything else>)
             API.RegisterCommand("/skydive", new Action<int, dynamic>((source, args) =>
             {
-                string is_enable = args.Count > 0 ? args[0].ToString().ToLower() : "false";
+                string is_enable = args.Count > 0 ? args[0].ToString().ToLower() : "true";
                 if (is_enable == "enable" || is_enable == "true" || is_enable == "yes" || is_enable == "on" || is_enable == "1")
                 {
                     // Disable standard / Enable skydive spawn coords resource (skater = standard, hipster = skydive)
