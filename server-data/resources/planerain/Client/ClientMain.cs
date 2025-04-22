@@ -73,11 +73,34 @@ namespace Planerain.Client
                 OnCleanUpPlanes();
             }), false);
             
-
             // get test setup
             API.RegisterCommand("/givetest", new Action<int, dynamic>((source, args) =>
             {
                 GiveTestSetup();
+            }), false);
+
+            // respwan by sky dive
+            API.RegisterCommand("/skydive", new Action<int, dynamic>((source, args) =>
+            {
+                string is_enable = args.Count > 0 ? args[0].ToString().ToLower() : "false";
+                if (is_enable == "enable" || is_enable == "true" || is_enable == "yes" || is_enable == "on" || is_enable == "1")
+                {
+                    // Disable standard / Enable skydive spawn coords resource (skater = standard, hipster = skydive)
+                    TriggerServerEvent("stopResource", "fivem-map-skater"); // Ask server to stop resource
+                    TriggerServerEvent("startResource", "fivem-map-hipster"); // Ask server to start resource
+                    hlog("YOU enabled skydive respawns!", true, true); // debug, screen
+                }
+                else
+                {
+                    // Disable skydive / Enable standard spawn coords resource (skater = standard, hipster = skydive)
+                    TriggerServerEvent("stopResource", "fivem-map-hipster"); // Ask server to stop resource
+                    TriggerServerEvent("startResource", "fivem-map-skater"); // Ask server to start resource
+                    hlog("YOU disabled skydive respawns!", true, true); // debug, screen
+                }
+
+                // kill player to force respawn
+                SetEntityHealth(PlayerPedId(), 0);
+                hlog("YOU were killed to force respawn!", true, true);
             }), false);
 
             // teleport player to new coords
@@ -275,6 +298,10 @@ namespace Planerain.Client
                         // Set plane properties
                         SetVehicleEngineOn(plane.Handle, false, true, true); // Engine off for free fall
                         SetVehicleForwardSpeed(plane.Handle, 0f); // No initial speed
+
+                        // increase downward velocity (increase gravitational force)
+                        float velocity_down = -20f;
+                        API.SetEntityVelocity(plane.Handle, 0f, 0f, velocity_down); 
 
                         // Set 90-degree downward pitch for vertical fall
                         SetEntityRotation(plane.Handle, -90f, 0f, 0f, 2, true);
