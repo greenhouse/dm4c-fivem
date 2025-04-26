@@ -2,6 +2,7 @@
 
 ## setup local VM (virtual box) ubuntu instance
     - install virtual box & ubuntu-22 live server instance
+        - NOTE: check 'skip unattended install' (ie. do not use unattended install)
         - NOTE: enable openSSH default installation option (during ubuntu live server intallation)
                 - this allows you to use the 'user-name' w/ the ssh login
                     NOTE: user-name & password will be created during ubuntu server install process
@@ -251,9 +252,11 @@
     - join game via fivem client on windows
     
 ## init project & build (local mac osx - unix base .net core)
+    $ DOTNET_CLI_TELEMETRY_OPTOUT=1
+    $ dotnet workload update
     $ dotnet --version
-    $ cd .../dm4c-fivem
     $ dotnet new -i CitizenFX.Templates
+    $ cd .../dm4c-fivem
     $ mkdir MyResource
     $ cd MyResource/
     $ dotnet new cfx-resource
