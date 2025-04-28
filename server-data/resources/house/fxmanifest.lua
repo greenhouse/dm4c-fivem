@@ -12,11 +12,3 @@ description 'Example Resource from C# Template'
 
 client_script 'Client/bin/Debug/**/*.net.dll'
 server_script 'Server/bin/Debug/**/*.net.dll'
-
-ui_page 'ui/index.html'
-
-files {
-    'ui/index.html',
-    'ui/script.js',
-    'ui/style.css'
-}

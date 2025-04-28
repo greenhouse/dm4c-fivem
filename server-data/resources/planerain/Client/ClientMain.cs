@@ -36,8 +36,6 @@ namespace Planerain.Client
             RegisterEventHanlders();
             RegisterTickHandlers();
             RegisterCommands();
-
-            SetDayTime();
         }
 
 
@@ -101,65 +99,6 @@ namespace Planerain.Client
                 // kill player to force respawn
                 SetEntityHealth(PlayerPedId(), 0);
                 hlog("YOU were killed to force respawn!", true, true);
-            }), false);
-
-            // teleport player to new coords
-            API.RegisterCommand("/jump", new Action<int, dynamic>((source, args) =>
-            {
-                List<float> coords = new List<float>();
-                if (args.Count >= 3 && args.Count <= 4) {
-                    if (float.TryParse(args[0].ToString(), out float xCoord)) coords.Add(xCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[0]}.", true, false); // debug, screen
-
-                    if (float.TryParse(args[1].ToString(), out float yCoord)) coords.Add(yCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[1]}.", true, false); // debug, screen
-
-                    if (float.TryParse(args[2].ToString(), out float zCoord)) coords.Add(zCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[2]}.", true, false); // debug, screen
-                } else {
-                    hlog($"/jump failed: Invalid arg count", true, true); // debug, screen
-                }      
-                
-                // check for range arg
-                float coordRange = 0;
-                if (args.Count == 4) {
-                    if (float.TryParse(args[3].ToString(), out float range)) coordRange = range;
-                    else hlog($"/jump warn: found Invalid range arg: {args[3]}. defaulting to range {coordRange}", true, false); // debug, screen
-                }
-
-                // execute coord jump
-                Vector3 coordsV = new Vector3(coords[0], coords[1], coords[2]);
-                OnJumpCommand(coordsV, coordRange);
-            }), false);
-
-            // manually give car
-            API.RegisterCommand("/givecar", new Action<int, dynamic>((source, args) =>
-            {
-                uint vehicleHash = (uint)API.GetHashKey("POLICE");
-                GiveVehicle(vehicleHash);
-                hlog($"YOU manually requested a car type: {vehicleHash}", true, true); // debug, screen
-            }), false);
-
-            // manually give bike
-            API.RegisterCommand("/givebike", new Action<int, dynamic>((source, args) =>
-            {
-                // nightblade
-                uint vehicleHash = (uint)API.GetHashKey("NIGHTBLADE");
-                GiveVehicle(vehicleHash);
-                hlog($"YOU manually requested a bike type: {vehicleHash}", true, true); // debug, screen
-            }), false);
-
-            // Register the /quit command
-            API.RegisterCommand("/quit", new Action<int, dynamic>((source, args) =>
-            {
-                QuitServer(); // Trigger server event to disconnect
-            }), false);
-
-            // get curreny coords
-            API.RegisterCommand("/coords", new Action<int, dynamic>((source, args) =>
-            {
-                Vector3 coords = API.GetEntityCoords(API.PlayerPedId(), false);
-                hlog($"YOU are at coords: {coords}", true, true); // debug, screen
             }), false);
         }
 
@@ -256,7 +195,11 @@ namespace Planerain.Client
         {
             // if (!isRainingPlanes)
             //     return;
-
+            if (activePlanes.Count >= MAX_PLANES) {
+                activePlanes.Clear();
+                hlog("max planes reached _ attempting Clear() to keep going", true, false); // debug, screen
+            }
+            
             if (activePlanes.Count < MAX_PLANES)
             {
                 hlog($"YOU are spawning planes: {activePlanes.Count}", true, false); // debug, screen
@@ -300,7 +243,7 @@ namespace Planerain.Client
                         SetVehicleForwardSpeed(plane.Handle, 0f); // No initial speed
 
                         // increase downward velocity (increase gravitational force)
-                        float velocity_down = -20f;
+                        float velocity_down = -50f;
                         API.SetEntityVelocity(plane.Handle, 0f, 0f, velocity_down); 
 
                         // Set 90-degree downward pitch for vertical fall
@@ -671,53 +614,10 @@ namespace Planerain.Client
 
             TriggerServerEvent("stoprain");
         }
-        private void SetDayTime()
-        {
-            NetworkOverrideClockTime(12, 0, 0); // Set time to 12:00:00 (noon)
-            SetWeatherTypeNow("CLEAR"); // Set weather to clear
-            hlog("Time set to daytime (12:00)", true, true);
-        }
         private void GiveTestSetup(){
             hlog($"YOU initialized test setup", true, true); // debug, screen
         }
-        private async void GiveVehicle(uint vehicleHash) {
-            // Spawn the waverunner near the player
-            int playerPed = API.PlayerPedId();
-            Vector3 playerPos = API.GetEntityCoords(playerPed, true);
 
-            // string model = "PCJ"; // Try "BMX", "SEASHARK", etc.
-
-            // uint modelHash = (uint)GetHashKey(vehicleHash);
-            RequestModel(vehicleHash);
-            int timeout = 0;
-            while (!HasModelLoaded(vehicleHash) && timeout < 50) // 5-second timeout
-            {
-                await Delay(100);
-                timeout++;
-            }
-            if (!HasModelLoaded(vehicleHash))
-            {
-                Screen.ShowNotification($"~r~Failed to load {vehicleHash}");
-                return;
-            }
-            int vehicle = API.CreateVehicle(vehicleHash, playerPos.X, playerPos.Y, playerPos.Z + 2.0f, API.GetEntityHeading(playerPed), true, false);
-
-            // Place the player in the vehicle
-            API.SetPedIntoVehicle(playerPed, vehicle, -1); // -1 is the driver seat
-
-            // Enable weapon usage in the vehicle -> NOTE_041625: not working, can't seem to ride with weapon & shoot
-            API.SetPedConfigFlag(playerPed, 184, true); // Allow weapons in vehicle
-            API.SetPedCanSwitchWeapon(playerPed, true); // Allow weapon switching
-            API.SetPlayerCanDoDriveBy(API.PlayerId(), true); // Enable drive-by shooting
-            API.SetCurrentPedWeapon(playerPed, (uint)API.GetHashKey("WEAPON_PISTOL"), true); // Equip a default weapon
-        }
-        private void QuitServer() {
-            // Notify the player
-            hlog("YOU are Disconnecting from the server...", true, true); // debug, screen
-
-            // Trigger server event to disconnect
-            TriggerServerEvent("playerQuit");
-        }
         private void hlog(string message, bool debug, bool screen)
         {
             if (debug) Debug.WriteLine(message);

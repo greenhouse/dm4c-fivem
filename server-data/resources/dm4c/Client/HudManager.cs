@@ -137,14 +137,7 @@ namespace DeathmatchClient
         }
         private void RegisterCommands() {
 
-            // get curreny coords
-            API.RegisterCommand("/givetest", new Action<int, dynamic>((source, args) =>
-            {
-                GiveTestSetup();
-
-            }), false);
-
-            // get curreny coords
+            // init test setup
             API.RegisterCommand("/givetest", new Action<int, dynamic>((source, args) =>
             {
                 GiveTestSetup();
@@ -216,104 +209,11 @@ namespace DeathmatchClient
                 TriggerServerEvent("loadReserveAmmo", ammo); // Reuse existing event
             }), false);
 
-            // teleport player to new coords
-            API.RegisterCommand("/jump", new Action<int, dynamic>((source, args) =>
-            {
-                List<float> coords = new List<float>();
-                if (args.Count >= 3 && args.Count <= 4) {
-                    if (float.TryParse(args[0].ToString(), out float xCoord)) coords.Add(xCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[0]}.", true, false); // debug, screen
-
-                    if (float.TryParse(args[1].ToString(), out float yCoord)) coords.Add(yCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[1]}.", true, false); // debug, screen
-
-                    if (float.TryParse(args[2].ToString(), out float zCoord)) coords.Add(zCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[2]}.", true, false); // debug, screen
-                } else {
-                    hlog($"/jump failed: Invalid arg count", true, true); // debug, screen
-                }      
-                
-                // check for range arg
-                float coordRange = 0;
-                if (args.Count == 4) {
-                    if (float.TryParse(args[3].ToString(), out float range)) coordRange = range;
-                    else hlog($"/jump warn: found Invalid range arg: {args[3]}. defaulting to range {coordRange}", true, false); // debug, screen
-                }
-
-                // execute coord jump
-                Vector3 coordsV = new Vector3(coords[0], coords[1], coords[2]);
-                OnJumpCommand(coordsV, coordRange);
-            }), false);
-
             // manually sync pickups from server side
             API.RegisterCommand("/syncpickups", new Action<int, dynamic>((source, args) =>
             {
                 TriggerServerEvent("requestPickupSync"); // Ask server for active pickups
                 hlog("YOU manually requested pickup sync", true, true); // debug, screen
-            }), false);
-
-            // manually sync pickups from server side
-            API.RegisterCommand("/stopresource", new Action<int, dynamic>((source, args) =>
-            {
-                if (args.Count > 0)
-                {
-                    string resourceName = args[0].ToString();
-                    TriggerServerEvent("stopResource", resourceName); // Ask server to stop resource
-                    hlog($"YOU manually requested resource stop: {resourceName}", true, true); // debug, screen
-                }
-                else
-                {
-                    hlog("YOU manually requested resource stop: no args", true, false); // debug, screen
-                }
-            }), false);
-
-            // manually give car
-            API.RegisterCommand("/givecar", new Action<int, dynamic>((source, args) =>
-            {
-                uint vehicleHash = (uint)API.GetHashKey("POLICE");
-                GiveVehicle(vehicleHash);
-                hlog($"YOU manually requested a car type: {vehicleHash}", true, true); // debug, screen
-            }), false);
-
-            // manually give bike
-            API.RegisterCommand("/givebike", new Action<int, dynamic>((source, args) =>
-            {
-                // nightblade
-                uint vehicleHash = (uint)API.GetHashKey("NIGHTBLADE");
-                // uint vehicleHash = (uint)API.GetHashKey("PCJ");
-                // uint vehicleHash = (uint)API.GetHashKey("BMX");
-                // uint vehicleHash = (uint)API.GetHashKey("policeb");
-                // uint vehicleHash = (uint)API.GetHashKey("BATI");
-                GiveVehicle(vehicleHash);
-                hlog($"YOU manually requested a bike type: {vehicleHash}", true, true); // debug, screen
-            }), false);
-
-            // manually give boat
-            API.RegisterCommand("/giveboat", new Action<int, dynamic>((source, args) =>
-            {
-                uint vehicleHash = (uint)API.GetHashKey("SEASHARK");
-                if (args.Count > 0)
-                {
-                    string type = args[0].ToString();
-                    vehicleHash = type == "2" ? (uint)API.GetHashKey("SEASHARK2") : (uint)API.GetHashKey("SEASHARK");
-                    vehicleHash = type == "3" ? (uint)API.GetHashKey("SEASHARK3") : (uint)API.GetHashKey("SEASHARK");
-                    vehicleHash = type == "4" ? (uint)API.GetHashKey("SPEEDER") : (uint)API.GetHashKey("SEASHARK");
-                }
-                GiveVehicle(vehicleHash);
-                hlog($"YOU manually requested a boat type: {vehicleHash}", true, true); // debug, screen
-            }), false);
-
-            // Register the /quit command
-            API.RegisterCommand("/quit", new Action<int, dynamic>((source, args) =>
-            {
-                QuitServer(); // Trigger server event to disconnect
-            }), false);
-
-            // get curreny coords
-            API.RegisterCommand("/coords", new Action<int, dynamic>((source, args) =>
-            {
-                Vector3 coords = API.GetEntityCoords(API.PlayerPedId(), false);
-                hlog($"YOU are at coords: {coords}", true, true); // debug, screen
             }), false);
         }
 

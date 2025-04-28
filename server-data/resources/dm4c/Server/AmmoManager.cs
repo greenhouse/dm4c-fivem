@@ -39,7 +39,6 @@ namespace DeathmatchServer
             EventHandlers["playerDiedDropAmmo"] += new Action<Player, int, Vector3>(OnPlayerDiedDropAmmo);
             EventHandlers["playerPickedUpAmmo"] += new Action<Player, int>(OnPlayerPickedUpAmmo);
             EventHandlers["requestPickupSync"] += new Action<Player>(OnRequestPickupSync);
-            EventHandlers["playerQuit"] += new Action<Player>(OnPlayerQuit);
             
             Tick += CreatePickups;
         }
@@ -131,13 +130,6 @@ namespace DeathmatchServer
                     // Debug.WriteLine($"Sent $BULLET token pickup-sync to client: Player {player.Name}({int.Parse(player.Handle)}) _ pickupId: {pickupId} _ $BULLET token amount: {bulletAmnt} _ coords: {deathCoords}");
                 }
             }
-        }
-        private void OnPlayerQuit([FromSource] Player player)
-        {
-            // Disconnect the player with a custom message
-            int playerHandlePickup = int.Parse(player.Handle);
-            player.Drop("You have disconnected using /quit.");
-            Debug.WriteLine($"Player {player.Name}({playerHandlePickup}) has disconnected using /quit.");
         }
         // private const float CheckInterval = 5.0f; // Check every 5 seconds
         private async System.Threading.Tasks.Task CreatePickups()

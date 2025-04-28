@@ -11,7 +11,6 @@ namespace turretdef.Server
             Debug.WriteLine("Hi from turretdef.Server!");
             // RegisterCommands();
             EventHandlers["playerSpawned"] += new Action<Player>(OnPlayerSpawned);
-            EventHandlers["playerQuit"] += new Action<Player>(OnPlayerQuit);
         }
         [Command("hello_server")]
         public void HelloServer()
@@ -39,13 +38,6 @@ namespace turretdef.Server
             //     PLAYER_RESERVES[playerHandle] = 0; // Initialize reserve ammo
             // }
             // player.TriggerEvent("updateAmmoReserve", PLAYER_RESERVES[playerHandle]);
-        }
-        private void OnPlayerQuit([FromSource] Player player)
-        {
-            // Disconnect the player with a custom message
-            int playerHandlePickup = int.Parse(player.Handle);
-            player.Drop("You have disconnected using /quit.");
-            Debug.WriteLine($"Player {player.Name}({playerHandlePickup}) has disconnected using /quit.");
         }
     }
 }

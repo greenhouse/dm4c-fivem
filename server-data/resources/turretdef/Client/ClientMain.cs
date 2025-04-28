@@ -2,9 +2,9 @@ using System;
 using System.Threading.Tasks;
 using CitizenFX.Core;
 using CitizenFX.Core.Native;
-using static CitizenFX.Core.Native.API;
 using CitizenFX.Core.UI;
 using System.Collections.Generic; // required for List<T> support
+using static CitizenFX.Core.Native.API;
 
 namespace turretdef.Client
 {
@@ -23,22 +23,14 @@ namespace turretdef.Client
         {
             Debug.WriteLine("Hi from turretdef.Client!");
 
-            SetDayTime();
             RegisterEventHanlders();
             RegisterTickHandlers();
-            RegisterDefaultCommands();
             RegisterCommands();            
         }
 
         /* -------------------------------------------------------- */
         /* PRIVATE - init support
         /* -------------------------------------------------------- */
-        private void SetDayTime()
-        {
-            NetworkOverrideClockTime(12, 0, 0); // Set time to 12:00:00 (noon)
-            SetWeatherTypeNow("CLEAR"); // Set weather to clear
-            hlog("Time set to daytime (12:00)", true, true);
-        }
         private void RegisterEventHanlders() {
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
             EventHandlers["playerKilledByPlayer"] += new Action<int, string>(OnPlayerKilled);
@@ -64,73 +56,6 @@ namespace turretdef.Client
                     hlog($"Set defense level {level}", true, true); // debug, screen
                 }), false);
             }
-        }
-        private void RegisterDefaultCommands()
-        {
-            // get test setup
-            API.RegisterCommand("/givetest", new Action<int, dynamic>((source, args) =>
-            {
-                // GiveTestSetup();
-            }), false);
-
-            // teleport player to new coords
-            API.RegisterCommand("/jump", new Action<int, dynamic>((source, args) =>
-            {
-                List<float> coords = new List<float>();
-                if (args.Count >= 3 && args.Count <= 4) {
-                    if (float.TryParse(args[0].ToString(), out float xCoord)) coords.Add(xCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[0]}.", true, false); // debug, screen
-
-                    if (float.TryParse(args[1].ToString(), out float yCoord)) coords.Add(yCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[1]}.", true, false); // debug, screen
-
-                    if (float.TryParse(args[2].ToString(), out float zCoord)) coords.Add(zCoord);
-                    else hlog($"/jump failed: Invalid jump coord: {args[2]}.", true, false); // debug, screen
-                } else {
-                    hlog($"/jump failed: Invalid arg count", true, true); // debug, screen
-                }      
-                
-                // check for range arg
-                float coordRange = 0;
-                if (args.Count == 4) {
-                    if (float.TryParse(args[3].ToString(), out float range)) coordRange = range;
-                    else hlog($"/jump warn: found Invalid range arg: {args[3]}. defaulting to range {coordRange}", true, false); // debug, screen
-                }
-
-                // execute coord jump
-                Vector3 coordsV = new Vector3(coords[0], coords[1], coords[2]);
-                OnJumpCommand(coordsV, coordRange);
-            }), false);
-
-            // manually give car
-            API.RegisterCommand("/givecar", new Action<int, dynamic>((source, args) =>
-            {
-                uint vehicleHash = (uint)API.GetHashKey("POLICE");
-                GiveVehicle(vehicleHash);
-                hlog($"YOU manually requested a car type: {vehicleHash}", true, true); // debug, screen
-            }), false);
-
-            // manually give bike
-            API.RegisterCommand("/givebike", new Action<int, dynamic>((source, args) =>
-            {
-                // nightblade
-                uint vehicleHash = (uint)API.GetHashKey("NIGHTBLADE");
-                GiveVehicle(vehicleHash);
-                hlog($"YOU manually requested a bike type: {vehicleHash}", true, true); // debug, screen
-            }), false);
-
-            // Register the /quit command
-            API.RegisterCommand("/quit", new Action<int, dynamic>((source, args) =>
-            {
-                QuitServer(); // Trigger server event to disconnect
-            }), false);
-
-            // get curreny coords
-            API.RegisterCommand("/coords", new Action<int, dynamic>((source, args) =>
-            {
-                Vector3 coords = API.GetEntityCoords(API.PlayerPedId(), false);
-                hlog($"YOU are at coords: {coords}", true, true); // debug, screen
-            }), false);
         }
 
         /* -------------------------------------------------------- */
