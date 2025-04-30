@@ -11,11 +11,30 @@ namespace house.Client
     public class ClientMain : BaseScript
     {
         /* -------------------------------------------------------- */
+        /* GLOBALS
+        /* -------------------------------------------------------- */
+        private readonly string[] WEAPON_NAME_LIST;
+
+        /* -------------------------------------------------------- */
         /* Constructor
         /* -------------------------------------------------------- */
         public ClientMain()
         {
             Debug.WriteLine("Hi from house.Client!");
+
+            // init globals
+            
+            WEAPON_NAME_LIST = new string[]
+            {
+                "WEAPON_PISTOL",       // Index 0
+                "WEAPON_ASSAULTRIFLE", // Index 1
+                "WEAPON_PUMPSHOTGUN",  // Index 2
+                "WEAPON_SNIPERRIFLE",  // Index 3
+                "WEAPON_GRENADE",      // Index 4
+                "WEAPON_RPG",          // Index 5
+                "WEAPON_HOMINGLAUNCHER", // Index 6
+                "GADGET_PARACHUTE", // Index 7
+            };            
 
             SetDayTime();
             RegisterEventHanlders();
@@ -50,11 +69,11 @@ namespace house.Client
         private void RegisterDefaultCommands()
         {
             // get test setup
-            // API.RegisterCommand("/givetest", new Action<int, dynamic>((source, args) =>
-            // {
-            //     // GiveTestSetup();
-            // }), false);
+            API.RegisterCommand("/giveguns", new Action<int, dynamic>((source, args) =>
+            {
+                GiveTestSetup();
 
+            }), false);
             // teleport player to new coords
             API.RegisterCommand("/jump", new Action<int, dynamic>((source, args) =>
             {
@@ -194,6 +213,26 @@ namespace house.Client
         /* -------------------------------------------------------- */
         /* PRIVATE - support functions
         /* -------------------------------------------------------- */
+        private void GiveTestSetup(){
+            // Give default weapons with 0 ammo
+            giveDefaultWeapons();
+            hlog($"YOU got weapons test setup", true, true); // debug, screen
+        }
+        private void giveDefaultWeapons() {
+            // Give default weapons with 0 ammo
+            int playerPed = API.PlayerPedId();
+            uint weaponHash = (uint)API.GetHashKey(WEAPON_NAME_LIST[0]);
+            API.GiveWeaponToPed(playerPed, weaponHash, 9999, false, true); // Equip pistol
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[1]), 9999, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[2]), 9999, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[3]), 9999, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[4]), 9999, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[5]), 9999, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[6]), 9999, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[7]), 9999, false, false);
+
+            hlog($"Gave default guns with 9999 ammo.", false, true); // debug, screen
+        }
         private void CoordJump(Vector3 coords, float range=0)
         {
             // Teleport player to new coordinates
