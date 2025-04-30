@@ -49,8 +49,8 @@ namespace DeathmatchClient
         // private Dictionary<int, Tuple<Vector3, int, int, bool>> BULLET_PICKUPS = new Dictionary<int, Tuple<Vector3, int, int, bool>>(); // <pickupId, <deathCoords, bulletAmnt, blip, isPickedUp>>
         private Dictionary<int, Tuple<int, bool>> BULLET_PICKUP_HANDLES = new Dictionary<int, Tuple<int, bool>>(); // <pickupId, <pickupHandle, isCollected>>
         private Dictionary<int, int> BULLET_BLIPS = new Dictionary<int, int>(); // <pickupId, blip>
-        private bool FLAG_PICKUPIDS_WRITING = false; // pickupId flag for reads to wait
-        private bool FLAG_PICKUPIDS_READING = true; // pickupId flag for writes to wait
+        // private bool FLAG_PICKUPIDS_WRITING = false; // pickupId flag for reads to wait
+        // private bool FLAG_PICKUPIDS_READING = true; // pickupId flag for writes to wait
         // private bool FLAG_CREATING_PICKUP = false; // pickup create flag
         // private bool FLAG_CHECKING_PICKUP = true; // pickup check flag
         private readonly float DIST_DRAW_PLAYER_DEATHCOORD = 10000f; // max range to draw pickup text for player to see
@@ -293,13 +293,13 @@ namespace DeathmatchClient
             // WriteToBulletPickups(pickupId, pickupHandle, new Tuple<Vector3, int, int, bool>(deathCoords, bulletAmnt, blip, false), false);
             hlog($"YOU Dropped {bulletAmnt} $BULLET tokens _ at: ({deathCoords})", true, false); // debug, screen
         }
-        private async void OnRemoveBulletTokenPickup(String playerName, int pickupId)
+        private void OnRemoveBulletTokenPickup(String playerName, int pickupId)
         {
             // wait on writing flag to finish
-            while (FLAG_PICKUPIDS_WRITING) await Delay(10);
+            // while (FLAG_PICKUPIDS_WRITING) await Delay(10);
 
             // set reading flag (so other threads wait to write)
-            FLAG_PICKUPIDS_READING = true;
+            // FLAG_PICKUPIDS_READING = true;
             // int blip = BULLET_PICKUPS[pickupId].Item3;
             int blip = BULLET_BLIPS[pickupId];
             
@@ -308,7 +308,7 @@ namespace DeathmatchClient
             BULLET_BLIPS.Remove(pickupId);
 
             // unset reading flag (so other threads can write)
-            FLAG_PICKUPIDS_READING = false;
+            // FLAG_PICKUPIDS_READING = false;
 
             // WriteToBulletPickups(pickupId, BULLET_PICKUP_HANDLES[pickupId].Item1, Tuple.Create(BULLET_PICKUPS[pickupId].Item1, BULLET_PICKUPS[pickupId].Item2, BULLET_PICKUPS[pickupId].Item3, true), true);
             hlog($"YOU Removed $BULLET token pickup _ pickupId: {pickupId}", true, true); // debug, screen

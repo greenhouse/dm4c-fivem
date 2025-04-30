@@ -219,17 +219,18 @@ namespace house.Client
             hlog($"YOU got weapons test setup", true, true); // debug, screen
         }
         private void giveDefaultWeapons() {
-            // Give default weapons with 0 ammo
+            // Give default weapons with 9999 ammo
+            int ammoCnt = 9999;
             int playerPed = API.PlayerPedId();
             uint weaponHash = (uint)API.GetHashKey(WEAPON_NAME_LIST[0]);
-            API.GiveWeaponToPed(playerPed, weaponHash, 9999, false, true); // Equip pistol
-            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[1]), 9999, false, false);
-            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[2]), 9999, false, false);
-            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[3]), 9999, false, false);
-            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[4]), 9999, false, false);
-            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[5]), 9999, false, false);
-            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[6]), 9999, false, false);
-            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[7]), 9999, false, false);
+            API.GiveWeaponToPed(playerPed, weaponHash, ammoCnt, false, true); // Equip pistol
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[1]), ammoCnt, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[2]), ammoCnt, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[3]), ammoCnt, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[4]), ammoCnt, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[5]), ammoCnt, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[6]), ammoCnt, false, false);
+            API.GiveWeaponToPed(playerPed, (uint)API.GetHashKey(WEAPON_NAME_LIST[7]), ammoCnt, false, false);
 
             hlog($"Gave default guns with 9999 ammo.", false, true); // debug, screen
         }
